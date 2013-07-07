@@ -1,12 +1,13 @@
 
+License:
+  Under the MIT license, see LICENSE.txt for details.
+
 Features:
 
 * Host a HTTP server
 * Generate a html pages for each commit (logs etc).
 * (Optionally) generate "JSON" or some interface so a purely "single page" could
    be made
-
-
 
 Pages:
 
