@@ -239,50 +239,19 @@ int main(int argc, char* argv[])
     ///std::cout << *u << std::endl;
   }
 
-  // tokens[0] should be api
-  // tokens[1] should be repositories
-  // tokens[2] is <repository-name>
+  Router router;
+  router["api"] = api_information;
+  router["api"]["repos"] = repositories_list;
+  router["api"]["repos"][Router::placeholder] = repository_information;
+  router["api"]["repos"][Router::placeholder]["branches"] = repository_branches;
+  router["api"]["repos"][Router::placeholder]["tags"] = repository_tags;
+  router["api"]["repos"][Router::placeholder]["tags"][Router::placeholder] =
+    repository_tag;
 
-  if (tokens.size() == 1)
+  // Perform the route.
+  if (!router(tokens))
   {
-    api_information();
-  }
-  else if (tokens[1] == "repositories" || tokens[1] == "repos")
-  {
-    if (tokens.size() == 2)
-    {
-      // List the repositories.
-      repositories_list();
-    }
-    else
-    {
-      // Look up information about a given repository.
-      const std::string& repositoryName = tokens[2];
-
-      boost::filesystem::path path(repositoriesPath);
-      path /= repositoryName;
-
-      if (tokens.size() == 3)
-      {
-        // List information about the repo.
-        std::vector<std::string> args(1, repositoryName);
-        repository_information(args);
-      }
-      else if (tokens[3] == "tags")
-      {
-        std::vector<std::string> args(1, repositoryName);
-        repository_tags(args);
-      }
-      else if (tokens[3] == "branches")
-      {
-        std::vector<std::string> args(1, repositoryName);
-        repository_branches(args);
-      }
-    }
-  }
-  else
-  {
-    fprintf(stderr, "Unknown resource: %s\n", tokens[1].c_str());
+    fprintf(stderr, "Unknown resource: %s\n", uri.c_str());
     return 1;
   }
 
