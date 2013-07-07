@@ -19,17 +19,22 @@ Router & Router::operator [](const char* term)
   return route.first->second;
 }
 
-void Router::operator()(const char* term) const
+bool Router::operator()(const char* term) const
 {
   // :TODO: Fix this so it doesn't die if there were placeholders.
   auto result = myRoutes.find(term);
   if (result != myRoutes.end())
   {
-    if (result->second.mySelfFunction) result->second.mySelfFunction();
+    if (result->second.mySelfFunction)
+    {
+      result->second.mySelfFunction();
+      return true;
+    }
   }
+  return false;
 }
 
-void Router::operator()(const std::vector<std::string>& terms) const
+bool Router::operator()(const std::vector<std::string>& terms) const
 {
   std::vector<std::string> placeholders;
 
@@ -62,6 +67,7 @@ void Router::operator()(const std::vector<std::string>& terms) const
       // allowing two of them in a row.
       //
       // TODO: Throw an "unknown_route_exception".
+      return false;
     }
     else
     {
@@ -72,16 +78,24 @@ void Router::operator()(const std::vector<std::string>& terms) const
   if (placeholders.empty() && router->mySelfFunction)
   {
     router->mySelfFunction();
+    return true;
   }
   else if (lastTermIsPlaceholder && router->myPlaceholderFunction)
   {
     router->myPlaceholderFunction(placeholders);
+    return true;
   }
   else if (router->myPlaceholderSelfFunction)
   {
     router->myPlaceholderSelfFunction(placeholders);
+    return true;
   }
-  //else throw an exception unknown_route_exception
+  else
+  {
+    // throw an exception unknown_route_exception
+    // for now just return false;
+    return false;
+  }
 }
 
 RouterWithPlaceholder Router::operator [](placeholder_t)

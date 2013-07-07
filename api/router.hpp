@@ -53,9 +53,9 @@ public:
   Router & operator [](const char* term);
   RouterWithPlaceholder operator [](placeholder_t);
 
-  // Methods for invoking the functions.
-  void operator()(const char* term) const;
-  void operator()(const std::vector<std::string>& terms) const;
+  // Methods for invoking the functions. Returns false is no route is present.
+  bool operator()(const char* term) const;
+  bool operator()(const std::vector<std::string>& terms) const;
 
 private:
   friend class RouterWithPlaceholder;
