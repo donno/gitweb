@@ -20,8 +20,8 @@ Pages:
   /<repo-name> - Home screen for a given repo
 
 JSON interface:
-  /api/repositories/<repo-name> - Summary of that repo.
-  /api/repositories/<repo-name>/branches - List the branches in that repo
-  /api/repositories/<repo-name>/tags - List the tags in that repo
-  /api/repositories/<repo-name>/tags/<name> - Information about that tag.
-  /api/repositories/<repo-name/commit/<hash> - Information for that hash.
+  /api/repos/<repo-name> - Summary of that repo.
+  /api/repos/<repo-name>/branches - List the branches in that repo
+  /api/repos/<repo-name>/tags - List the tags in that repo
+  /api/repos/<repo-name>/tags/<name> - Information about that tag.
+  /api/repos/<repo-name/commit/<hash> - Information for that hash.
