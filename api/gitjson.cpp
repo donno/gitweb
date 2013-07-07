@@ -94,9 +94,9 @@ static int for_branches(
 static int for_tags(
   const char *name, git_oid *oid, void *payload)
 {
-  std::vector<std::string>* tags =
-    reinterpret_cast<std::vector<std::string>*>(payload);
-  tags->push_back(name);
+  std::vector<std::pair<std::string, git_oid>>* tags =
+    reinterpret_cast<std::vector<std::pair<std::string, git_oid>>*>(payload);
+  tags->push_back(std::make_pair(name, *oid));
   return 0;
 }
 
@@ -162,14 +162,25 @@ void repository_tags(const std::vector<std::string>& arguments)
 
   if (error != 0) return;
 
-  std::vector<std::string> tags;
+  std::vector<std::pair<std::string, git_oid>> tags;
   error = git_tag_foreach(repo, for_tags, &tags);
   git_repository_free(repo);
 
   {
+    char commitHash[64] = {0};
     auto object = JsonWriter::object(&std::cout);
     object["repository"] = repositoryName;
-    object["tags"].array() << tags;
+    {
+      auto aw = object["tags"].array();
+      for (auto tag = std::begin(tags); tag != std::end(tags); ++tag)
+      {
+        git_oid_fmt(commitHash, &tag->second);
+
+        auto tagObject = aw.object();
+        tagObject["name"] = tag->first;
+        tagObject["hash"] = commitHash;
+      }
+    }
   }
 }
 
