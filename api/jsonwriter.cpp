@@ -105,6 +105,11 @@ JsonWriterObject& JsonWriterObject::operator [](const char* key)
   return *this;
 }
 
+JsonWriterObject& JsonWriterObject::operator =(const std::string& value)
+{
+  return this->operator =(value.c_str());
+}
+
 JsonWriterObject& JsonWriterObject::operator =(const char* value)
 {
   // TODO: Return another class.

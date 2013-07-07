@@ -92,6 +92,7 @@ public:
   // Prefer this version.
   JsonWriterObject& operator [](const char* key);
 
+  JsonWriterObject& operator =(const std::string& value);
   JsonWriterObject& operator =(const char* value);
   JsonWriterObject& operator =(const JsonWriterArray& value);
 
