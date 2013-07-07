@@ -9,6 +9,7 @@
 #include "router.hpp"
 #include "jsonwriter.hpp"
 
+#include <functional>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -27,6 +28,10 @@
 #define VERSION "0.1.0"
 
 static const char* repositoriesPath = "W:/source";
+
+// Helper functions
+JsonWriterArray& operator <<(
+  JsonWriterArray& writer, const std::vector<std::string>& strings);
 
 namespace git
 {
@@ -95,20 +100,13 @@ static int for_tags(
   return 0;
 }
 
-template <typename Container>
-static void output(const Container& container, std::ostream* output)
+JsonWriterArray& operator <<(
+  JsonWriterArray& writer, const std::vector<std::string>& strings)
 {
-  std::ostream& out = *output;
-  out << "[" << std::endl;
-  auto itemEnd = std::end(container);
-  for (auto item = std::begin(container); item != itemEnd; )
-  {
-    out << "  \"" << *(item++) << "\"";
-    if (item != itemEnd) out << ',';
-    out << std::endl;
-  }
+  std::for_each(std::begin(strings), std::end(strings),
+                [&writer](const std::string& s) { writer << s; });
 
-  out << "]" << std::endl;
+  return writer;
 }
 
 static void api_information()
@@ -164,11 +162,15 @@ void repository_tags(const std::vector<std::string>& arguments)
 
   if (error != 0) return;
 
-  std::vector<std::string> branches;
-  error = git_tag_foreach(repo, for_tags, &branches);
+  std::vector<std::string> tags;
+  error = git_tag_foreach(repo, for_tags, &tags);
   git_repository_free(repo);
 
-  output(branches, &std::cout);
+  {
+    auto object = JsonWriter::object(&std::cout);
+    object["repository"] = repositoryName;
+    object["tags"].array() << tags;
+  }
 }
 
 void repository_branches(const std::vector<std::string>& arguments)
@@ -188,7 +190,11 @@ void repository_branches(const std::vector<std::string>& arguments)
     repo, GIT_BRANCH_REMOTE, for_branches, &branches);
   git_repository_free(repo);
 
-  output(branches, &std::cout);
+  {
+    auto object = JsonWriter::object(&std::cout);
+    object["repository"] = repositoryName;
+    object["branches"].array() << branches;
+  }
 }
 
 void repository_tag(const std::vector<std::string>& arguments)
