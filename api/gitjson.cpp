@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Router.hpp"
+
 #include <iostream>
 #include <string>
 #include <vector>
@@ -108,35 +110,96 @@ static void output(const Container& container, std::ostream* output)
   out << "]" << std::endl;
 }
 
+static void api_information()
+{
+  int major, minor, rev;
+  git_libgit2_version(&major, &minor, &rev);
+  std::cout
+    << "{" << std::endl
+    << "   \"version\": \"" VERSION "\"," << std::endl
+    << "   \"libgit2\": { \"version\": \"" << major << '.' << minor << '.'
+                                    << rev << "\" }" << std::endl
+    << "}" << std::endl;
+}
 
-static int listRepositories(std::ostream* output)
+static void repositories_list()
 {
   const boost::filesystem::path path(repositoriesPath);
   if (!boost::filesystem::is_directory(path))
   {
     fprintf(stderr, "Could not find repositories as %s is not a directory.",
             repositoriesPath);
-    return 1;
+    return;
   }
 
   std::vector<boost::filesystem::path> repos = git::repositories(path);
-  std::ostream& out = *output;
 
-  out << "[" << std::endl;
+  std::cout << "[" << std::endl;
   for (auto repo = std::begin(repos); repo != std::end(repos); )
   {
-    out << "  \"" << (repo++)->string() << "\"";
+    std::cout << "  \"" << (repo++)->string() << "\"";
     if (repo != std::end(repos))
     {
-      out << ',';
+      std::cout << ',';
     }
 
-    out << std::endl;
+    std::cout << std::endl;
   }
 
-  out << "]" << std::endl;
+  std::cout << "]" << std::endl;
+}
 
-  return 0;
+void repository_information(const std::vector<std::string>& arguments)
+{
+  std::cout << "repository_information for \"" << arguments[0] << '"'
+            << std::endl;
+
+  // TODO: Implement this function.
+}
+
+void repository_tags(const std::vector<std::string>& arguments)
+{
+  const std::string& repositoryName = arguments.front();
+
+  boost::filesystem::path path(repositoriesPath);
+  path /= repositoryName;
+
+  git_repository* repo;
+  int error = git_repository_open(&repo, path.string().c_str());
+
+  if (error != 0) return;
+
+  std::vector<std::string> branches;
+  error = git_tag_foreach(repo, for_tags, &branches);
+  git_repository_free(repo);
+
+  output(branches, &std::cout);
+}
+
+void repository_branches(const std::vector<std::string>& arguments)
+{
+  const std::string& repositoryName = arguments.front();
+
+  boost::filesystem::path path(repositoriesPath);
+  path /= repositoryName;
+
+  git_repository* repo;
+  int error = git_repository_open(&repo, path.string().c_str());
+
+  if (error != 0) return;
+
+  std::vector<std::string> branches;
+  error = git_branch_foreach(
+    repo, GIT_BRANCH_REMOTE, for_branches, &branches);
+  git_repository_free(repo);
+
+  output(branches, &std::cout);
+}
+
+void repository_tag(const std::vector<std::string>& arguments)
+{
+  std::cout << "tag \"" << arguments[1] << "\" for \""  << arguments[0] << '"'
+            << std::endl;
 }
 
 int main(int argc, char* argv[])
@@ -182,21 +245,14 @@ int main(int argc, char* argv[])
 
   if (tokens.size() == 1)
   {
-    int major, minor, rev;
-    git_libgit2_version(&major, &minor, &rev);
-    std::cout
-      << "{" << std::endl
-      << "   \"version\": \"" VERSION "\"," << std::endl
-      << "   \"libgit2\": { \"version\": \"" << major << '.' << minor << '.'
-                                      << rev << "\" }" << std::endl
-      << "}" << std::endl;
+    api_information();
   }
   else if (tokens[1] == "repositories" || tokens[1] == "repos")
   {
     if (tokens.size() == 2)
     {
       // List the repositories.
-      return listRepositories(&std::cout);
+      repositories_list();
     }
     else
     {
@@ -209,34 +265,18 @@ int main(int argc, char* argv[])
       if (tokens.size() == 3)
       {
         // List information about the repo.
-        std::cout << "NYI: 1" << std::endl;
+        std::vector<std::string> args(1, repositoryName);
+        repository_information(args);
       }
       else if (tokens[3] == "tags")
       {
-        git_repository* repo;
-        int error = git_repository_open(&repo, path.string().c_str());
-
-        if (error != 0) return error;
-
-        std::vector<std::string> branches;
-        error = git_tag_foreach(repo, for_tags, &branches);
-        git_repository_free(repo);
-
-        output(branches, &std::cout);
+        std::vector<std::string> args(1, repositoryName);
+        repository_tags(args);
       }
       else if (tokens[3] == "branches")
       {
-        git_repository* repo;
-        int error = git_repository_open(&repo, path.string().c_str());
-
-        if (error != 0) return error;
-
-        std::vector<std::string> branches;
-        error = git_branch_foreach(
-          repo, GIT_BRANCH_REMOTE, for_branches, &branches);
-        git_repository_free(repo);
-
-        output(branches, &std::cout);
+        std::vector<std::string> args(1, repositoryName);
+        repository_branches(args);
       }
     }
   }
@@ -245,8 +285,6 @@ int main(int argc, char* argv[])
     fprintf(stderr, "Unknown resource: %s\n", tokens[1].c_str());
     return 1;
   }
-
-
 
   return 0;
 }
