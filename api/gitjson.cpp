@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Router.hpp"
+#include "router.hpp"
+#include "jsonwriter.hpp"
 
 #include <iostream>
 #include <string>
@@ -134,19 +135,13 @@ static void repositories_list()
 
   std::vector<boost::filesystem::path> repos = git::repositories(path);
 
-  std::cout << "[" << std::endl;
-  for (auto repo = std::begin(repos); repo != std::end(repos); )
   {
-    std::cout << "  \"" << (repo++)->string() << "\"";
-    if (repo != std::end(repos))
+    auto aw = JsonWriter::array(&std::cout);
+    for (auto repo = std::begin(repos); repo != std::end(repos); ++repo)
     {
-      std::cout << ',';
+      aw << repo->string();
     }
-
-    std::cout << std::endl;
   }
-
-  std::cout << "]" << std::endl;
 }
 
 void repository_information(const std::vector<std::string>& arguments)
