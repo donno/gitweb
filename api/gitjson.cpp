@@ -223,22 +223,6 @@ int main(int argc, char* argv[])
     return 1;
   }
 
-  std::vector<std::string> tokens;
-  {
-    std::istringstream iss(uri);
-    std::string token;
-    while (std::getline(iss, token, '/'))
-    {
-      if (token.empty()) continue;
-      tokens.push_back(token);
-    }
-  }
-
-  for (auto u = tokens.begin(); u != tokens.end(); ++u)
-  {
-    ///std::cout << *u << std::endl;
-  }
-
   Router router;
   router["api"] = api_information;
   router["api"]["repos"] = repositories_list;
@@ -249,7 +233,7 @@ int main(int argc, char* argv[])
     repository_tag;
 
   // Perform the route.
-  if (!router(tokens))
+  if (!router(argv[1], '/'))
   {
     fprintf(stderr, "Unknown resource: %s\n", uri.c_str());
     return 1;
