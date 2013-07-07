@@ -54,7 +54,10 @@ public:
   RouterWithPlaceholder operator [](placeholder_t);
 
   // Methods for invoking the functions. Returns false is no route is present.
-  bool operator()(const char* term) const;
+  //
+  // The first will tokenise the given path into terms.
+  // The second asumes it has already been broken up into terms.
+  bool operator()(const char* path, char token = '/') const;
   bool operator()(const std::vector<std::string>& terms) const;
 
 private:

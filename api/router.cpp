@@ -10,6 +10,7 @@
 
 #include <iostream>
 #include <string>
+#include <sstream>
 #include <map>
 #include <vector>
 
@@ -19,19 +20,20 @@ Router & Router::operator [](const char* term)
   return route.first->second;
 }
 
-bool Router::operator()(const char* term) const
+bool Router::operator()(const char* path, char token) const
 {
-  // :TODO: Fix this so it doesn't die if there were placeholders.
-  auto result = myRoutes.find(term);
-  if (result != myRoutes.end())
+  std::vector<std::string> terms;
   {
-    if (result->second.mySelfFunction)
+    std::istringstream iss(path);
+    std::string term;
+    while (std::getline(iss, term, token))
     {
-      result->second.mySelfFunction();
-      return true;
+      if (term.empty()) continue;
+      terms.push_back(term);
     }
   }
-  return false;
+
+  return (*this)(terms);
 }
 
 bool Router::operator()(const std::vector<std::string>& terms) const
