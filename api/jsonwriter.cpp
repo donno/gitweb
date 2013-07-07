@@ -230,6 +230,28 @@ JsonWriterArray& JsonWriterArray::operator <<(const std::string& value)
   return this->operator <<(value.c_str());
 }
 
+JsonWriterObject JsonWriterArray::object()
+{
+  if (hasAnElement)
+  {
+    if (isIndenting)
+    {
+      myOutput << ',' << std::endl << myIndentation << myIndentation;
+    }
+    else
+    {
+      myOutput << ',';
+    }
+  }
+  else if (isIndenting)
+  {
+    myOutput << myIndentation << myIndentation;
+  }
+
+  hasAnElement = true;
+  return JsonWriterObject(&myOutput, myIndentation + "  ");
+}
+
 #ifdef JSONWRITER_ENABLE_TESTING
 
 #include <iostream>

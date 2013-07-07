@@ -121,6 +121,10 @@ public:
 
   JsonWriterArray& operator <<(const char* value);
   JsonWriterArray& operator <<(const std::string& value);
+
+  JsonWriterObject object();
+
+  // TODO: Support putting an array in an array.
 };
 
 //===--------------------------- End of the file --------------------------===//
