@@ -69,6 +69,10 @@ namespace JsonWriter
 {
   JsonWriterObject object(std::ostream* output);
   JsonWriterArray array(std::ostream* output);
+
+  // Escapes double quotes, backslash, whitespace (backspace, form-feed, line
+  // feed, carriage-return and tab) and all control codes less than 20.
+  std::string escape(const char* string);
 }
 
 class JsonWriterObject

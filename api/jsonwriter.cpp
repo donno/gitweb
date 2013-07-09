@@ -8,6 +8,9 @@
 
 #include "jsonwriter.hpp"
 
+#include <iomanip>
+#include <sstream>
+
 JsonWriterObject JsonWriter::object(std::ostream* output)
 {
   return JsonWriterObject(output);
@@ -16,6 +19,38 @@ JsonWriterObject JsonWriter::object(std::ostream* output)
 JsonWriterArray JsonWriter::array(std::ostream* output)
 {
   return JsonWriterArray(output);
+}
+
+std::string JsonWriter::escape(const char* string)
+{
+  std::ostringstream ss;
+  for (const char* c = string; *c != '\0'; ++c)
+  {
+    // Escape the following charachters.
+    switch (*c)
+    {
+    case '"': ss << "\\\""; break;
+    case '\\': ss << "\\\\"; break;
+    case '\b': ss << "\\b"; break;
+    case '\f': ss << "\\f"; break;
+    case '\n': ss << "\\n"; break;
+    case '\r': ss << "\\r"; break;
+    case '\t': ss << "\\t"; break;
+    default:
+      if (*c < 20)
+      {
+        // Escape the other control codes by using 4 hex digits.
+        ss << "\\u"  << std::setfill('0') << std::setw(4)
+           << std::hex << *c << std::dec;
+      }
+      else
+      {
+        ss << *c;
+      }
+      break;
+    }
+  }
+  return ss.str();
 }
 
 
