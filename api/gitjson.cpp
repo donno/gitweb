@@ -81,9 +81,9 @@ std::vector<boost::filesystem::path> git::repositories(
 }
 
 static int for_branches(
-	const char *branch_name,
-	git_branch_t branch_type,
-	void *payload)
+  const char *branch_name,
+  git_branch_t branch_type,
+  void *payload)
 {
   std::vector<std::string>* branches =
     reinterpret_cast<std::vector<std::string>*>(payload);
@@ -143,10 +143,41 @@ static void repositories_list()
 
 void repository_information(const std::vector<std::string>& arguments)
 {
-  std::cout << "repository_information for \"" << arguments[0] << '"'
-            << std::endl;
+  const std::string& repositoryName = arguments.front();
 
-  // TODO: Implement this function.
+  boost::filesystem::path path(repositoriesPath);
+  path /= repositoryName;
+
+  git_repository* repo;
+  int error = git_repository_open(&repo, path.string().c_str());
+
+  if (error != 0) return;
+
+  std::vector<std::string> branches;
+  std::vector<std::pair<std::string, git_oid>> tags;
+
+  git_branch_foreach(repo, GIT_BRANCH_REMOTE, for_branches, &branches);
+  git_tag_foreach(repo, for_tags, &tags);
+
+  {
+    char commitHash[64] = {0};
+    auto object = JsonWriter::object(&std::cout);
+    object["repository"] = repositoryName;
+    object["branches"].array() << branches;
+    {
+      auto aw = object["tags"].array();
+      for (auto tag = std::begin(tags); tag != std::end(tags); ++tag)
+      {
+        git_oid_fmt(commitHash, &tag->second);
+
+        auto tagObject = aw.object();
+        tagObject["name"] = tag->first;
+        tagObject["hash"] = commitHash;
+      }
+    }
+  }
+
+  git_repository_free(repo);
 }
 
 void repository_tags(const std::vector<std::string>& arguments)
@@ -163,8 +194,6 @@ void repository_tags(const std::vector<std::string>& arguments)
 
   std::vector<std::pair<std::string, git_oid>> tags;
   error = git_tag_foreach(repo, for_tags, &tags);
-  git_repository_free(repo);
-
   {
     char commitHash[64] = {0};
     auto object = JsonWriter::object(&std::cout);
@@ -181,6 +210,8 @@ void repository_tags(const std::vector<std::string>& arguments)
       }
     }
   }
+
+  git_repository_free(repo);
 }
 
 void repository_branches(const std::vector<std::string>& arguments)
@@ -218,7 +249,7 @@ int main(int argc, char* argv[])
   // Command line parser.
   //
   // examples:
-  // /api/repositories/<repo-name>/tags
+  // /api/repos/<repo-name>/tags
   if (argc != 2)
   {
     fprintf(stderr, "usage: %s <uri>\n", argv[0]);
