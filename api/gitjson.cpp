@@ -244,6 +244,46 @@ void repository_tag(const std::vector<std::string>& arguments)
             << std::endl;
 }
 
+void repository_commit(const std::vector<std::string>& arguments)
+{
+  const std::string& repositoryName = arguments.front();
+
+  boost::filesystem::path path(repositoriesPath);
+  path /= repositoryName;
+
+  const std::string& commitHash = arguments[1];
+
+  git_oid id;
+  if (git_oid_fromstrp(&id, commitHash.c_str()) != 0)
+  {
+    fprintf(stderr, "Failed to decode commit hash [%s]\n", commitHash.c_str());
+    return;
+  }
+
+  git_repository* repo;
+  int error = git_repository_open(&repo, path.string().c_str());
+  if (error != 0) return;
+
+  git_commit* commit;
+  git_commit_lookup(&commit, repo, &id);
+
+  const git_signature * author = git_commit_author(commit);
+  {
+    auto object = JsonWriter::object(&std::cout);
+    object["hash"] = commitHash;
+    object["author"] = author->name;
+    object["email"] = author->email;
+    // TODO: Add time...
+
+    // TODO: Check the policy of freeing the commit message...
+    // TODO: Sanitise the commit message (escape quotes/new lines).
+    object["message"] = git_commit_message(commit);
+  }
+
+  git_commit_free(commit);
+  git_repository_free(repo);
+}
+
 int main(int argc, char* argv[])
 {
   // Command line parser.
@@ -273,6 +313,8 @@ int main(int argc, char* argv[])
   router["api"]["repos"][Router::placeholder]["tags"] = repository_tags;
   router["api"]["repos"][Router::placeholder]["tags"][Router::placeholder] =
     repository_tag;
+  router["api"]["repos"][Router::placeholder]["commits"][Router::placeholder] =
+    repository_commit;
 
   // Perform the route.
   if (!router(argv[1], '/'))
