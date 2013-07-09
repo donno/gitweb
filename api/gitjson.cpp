@@ -131,13 +131,12 @@ static void repositories_list()
     return;
   }
 
-  std::vector<boost::filesystem::path> repos = git::repositories(path);
-
   {
+    std::vector<boost::filesystem::path> repos = git::repositories(path);
     auto aw = JsonWriter::array(&std::cout);
     for (auto repo = std::begin(repos); repo != std::end(repos); ++repo)
     {
-      aw << repo->string();
+      aw << repo->stem().string();
     }
   }
 }
