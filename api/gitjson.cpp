@@ -275,9 +275,7 @@ void repository_commit(const std::vector<std::string>& arguments)
     object["email"] = author->email;
     // TODO: Add time...
 
-    // TODO: Check the policy of freeing the commit message...
-    // TODO: Sanitise the commit message (escape quotes/new lines).
-    object["message"] = git_commit_message(commit);
+    object["message"] = JsonWriter::escape(git_commit_message(commit));
   }
 
   git_commit_free(commit);
