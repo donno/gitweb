@@ -268,12 +268,17 @@ void repository_commit(const std::vector<std::string>& arguments)
   git_commit_lookup(&commit, repo, &id);
 
   const git_signature * author = git_commit_author(commit);
+  const git_time_t time = git_commit_time(commit);
   {
     auto object = JsonWriter::object(&std::cout);
     object["hash"] = commitHash;
     object["author"] = author->name;
     object["email"] = author->email;
-    // TODO: Add time...
+
+    char timeString[sizeof("2011-10-08T07:07:09Z")];
+    strftime(timeString, sizeof(timeString), "%Y-%m-%dT%H:%M:%SZ",
+             gmtime(&time));
+    object["when"] = timeString;
 
     object["message"] = JsonWriter::escape(git_commit_message(commit));
   }
