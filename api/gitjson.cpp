@@ -348,6 +348,38 @@ void repository_commit(const std::vector<std::string>& arguments)
   git_commit_free(commit);
 }
 
+void repository_file(const std::vector<std::string>& arguments)
+{
+  // Writes out a given file from the repository, as-is, with no additional
+  // metadata.
+  const std::string& repositoryName = arguments.front();
+  git::Repository repository(repositoryName);
+
+  if (!repository.IsOpen()) return;
+
+  const std::string& commitHash = arguments[1];
+
+  git_object* object;
+  if (git_revparse_single(&object, repository, commitHash.c_str()) < 0)
+  {
+    fprintf(stderr, "Could not resolve '%s'\n", commitHash.c_str());
+    return;
+  }
+
+  // TODO: Handle other types better.
+  if (git_object_type(object) != GIT_OBJ_BLOB)
+  {
+    fprintf(stderr, "The given reference is not a file.");
+    return;
+  }
+
+  const git_blob* blob = (const git_blob *)object;
+
+  fwrite(git_blob_rawcontent(blob), git_blob_rawsize(blob), 1, stdout);
+
+  git_object_free(object);
+}
+
 int main(int argc, char* argv[])
 {
   // Command line parser.
@@ -379,6 +411,11 @@ int main(int argc, char* argv[])
     repository_tag;
   router["api"]["repos"][Router::placeholder]["commits"][Router::placeholder] =
     repository_commit;
+
+  // Output the file with no manipulation (i.e it won't be put into JSON, etc.
+  // TODO: Add support for "raw" and change this to use "raw".
+  router["api"]["repos"][Router::placeholder]["file"][Router::placeholder] =
+    repository_file;
 
   // Perform the route.
   if (!router(argv[1], '/'))
