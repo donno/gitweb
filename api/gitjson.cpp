@@ -308,9 +308,9 @@ void repository_tag(const std::vector<std::string>& arguments)
 void repository_commit(const std::vector<std::string>& arguments)
 {
   const std::string& repositoryName = arguments.front();
+  git::Repository repository(repositoryName);
 
-  boost::filesystem::path path(repositoriesPath);
-  path /= repositoryName;
+  if (!repository.IsOpen()) return;
 
   const std::string& commitHash = arguments[1];
 
@@ -321,13 +321,14 @@ void repository_commit(const std::vector<std::string>& arguments)
     return;
   }
 
-  git_repository* repo;
-  int error = git_repository_open(&repo, path.string().c_str());
-  if (error != 0) return;
-
   git_commit* commit;
-  git_commit_lookup(&commit, repo, &id);
+  git_commit_lookup(&commit, repository, &id);
 
+  if (!commit)
+  {
+    fprintf(stderr, "Failed to lookup commit [%s]\n", commitHash.c_str());
+    return;
+  }
   const git_signature * author = git_commit_author(commit);
   const git_time_t time = git_commit_time(commit);
   {
@@ -345,7 +346,6 @@ void repository_commit(const std::vector<std::string>& arguments)
   }
 
   git_commit_free(commit);
-  git_repository_free(repo);
 }
 
 int main(int argc, char* argv[])
