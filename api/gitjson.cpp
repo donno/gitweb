@@ -39,6 +39,27 @@ namespace git
   std::vector<boost::filesystem::path> repositories(
     const boost::filesystem::path& Path);
 
+  // Class for helping set-up the repository
+  class Repository
+  {
+    boost::filesystem::path myPath;
+    git_repository* myRepository;
+
+  public:
+    //  Opens the repository with the given name in repositoriesPath..
+    Repository(const std::string& name);
+
+    // Convenience operator to allow instances of this class to be passed
+    // directly to the libgit2 functions.
+    operator git_repository*() const { return myRepository; }
+
+    // Determines if the repository is opened.
+    bool IsOpen() const { return myRepository != nullptr; }
+
+    // Closes the repository. Everything opened from the repository should be
+    // closed (freed) before this occurs.
+    ~Repository();
+  };
 }
 
 std::vector<boost::filesystem::path> git::repositories(
@@ -78,6 +99,46 @@ std::vector<boost::filesystem::path> git::repositories(
   }
 
   return repositories;
+}
+
+git::Repository::Repository(const std::string& name)
+: myPath(boost::filesystem::path(repositoriesPath) / name),
+  myRepository(nullptr)
+{
+  const boost::filesystem::path path(repositoriesPath);
+  if (!boost::filesystem::is_directory(path))
+  {
+    fprintf(stderr, "Could not find repository as \"%s\" is not a directory.\n",
+            repositoriesPath);
+    return;
+  }
+  else if (!boost::filesystem::is_directory(myPath))
+  {
+    fprintf(stderr, "Could not find repository from 's'\n",
+            myPath.string().c_str());
+    return;
+  }
+
+  int error = git_repository_open(&myRepository, myPath.string().c_str());
+  if (error != 0)
+  {
+    const git_error* lastError = giterr_last();
+    if (lastError && lastError->message)
+    {
+      fprintf(stderr, lastError->message);
+    }
+    else
+    {
+      fprintf(stderr, "Could not open repository: cause unknown.\n");
+    }
+    return;
+  }
+}
+
+git::Repository::~Repository()
+{
+  git_repository_free(myRepository);
+  myRepository = nullptr;
 }
 
 static int for_branches(
