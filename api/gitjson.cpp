@@ -56,10 +56,39 @@ namespace git
     // Determines if the repository is opened.
     bool IsOpen() const { return myRepository != nullptr; }
 
+    // Finds an object with the given "specification" which may be the hex-hash
+    // or a named reference (tag).
+    //
+    // The caller is responsnible for freeing the object, and should do so
+    // before the Repository destructs.
+    //
+    // Returns null if it can't open the object.
+    git_object* Parse(const std::string& specification);
+
     // Closes the repository. Everything opened from the repository should be
     // closed (freed) before this occurs.
     ~Repository();
   };
+}
+
+git_object* git::Repository::Parse(const std::string& specification)
+{
+  git_object* object = nullptr;
+  int error = git_revparse_single(&object, myRepository, specification.c_str());
+  if (error != 0)
+  {
+    const git_error* lastError = giterr_last();
+    if (lastError && lastError->message)
+    {
+      fprintf(stderr, "%s\n", lastError->message);
+    }
+    else
+    {
+      fprintf(stderr, "Could not resolve '%s'\n", specification.c_str());
+    }
+    return nullptr;
+  }
+  return object;
 }
 
 std::vector<boost::filesystem::path> git::repositories(
@@ -357,14 +386,10 @@ void repository_file(const std::vector<std::string>& arguments)
 
   if (!repository.IsOpen()) return;
 
-  const std::string& commitHash = arguments[1];
+  const std::string& specification = arguments[1];
 
-  git_object* object;
-  if (git_revparse_single(&object, repository, commitHash.c_str()) < 0)
-  {
-    fprintf(stderr, "Could not resolve '%s'\n", commitHash.c_str());
-    return;
-  }
+  git_object* object = repository.Parse(specification);
+  if (!object) return;
 
   // TODO: Handle other types better.
   if (git_object_type(object) != GIT_OBJ_BLOB)
