@@ -341,27 +341,34 @@ void repository_commit(const std::vector<std::string>& arguments)
 
   if (!repository.IsOpen()) return;
 
-  const std::string& commitHash = arguments[1];
+  const std::string& specification = arguments[1];
 
-  git_oid id;
-  if (git_oid_fromstrp(&id, commitHash.c_str()) != 0)
+  git_object* object = repository.Parse(specification);
+  if (!object) return;
+
+  // TODO: Handle indirection through an annoated tag.
+  switch (git_object_type(object))
   {
-    fprintf(stderr, "Failed to decode commit hash [%s]\n", commitHash.c_str());
+  default:
+    fprintf(stderr, "'%s' does not reference a commit.\n",
+	    specification.c_str());
     return;
+  case GIT_OBJ_COMMIT:
+    break;
   }
 
-  git_commit* commit;
-  git_commit_lookup(&commit, repository, &id);
+  const git_oid* oid = git_object_id(object);
+  const git_commit* commit = (const git_commit*)object;
 
-  if (!commit)
-  {
-    fprintf(stderr, "Failed to lookup commit [%s]\n", commitHash.c_str());
-    return;
-  }
+  char commitHash[41];
+  commitHash[40] = '\0';
+  git_oid_fmt(commitHash, oid);
+
   const git_signature * author = git_commit_author(commit);
   const git_time_t time = git_commit_time(commit);
   {
     auto object = JsonWriter::object(&std::cout);
+
     object["hash"] = commitHash;
     object["author"] = author->name;
     object["email"] = author->email;
@@ -374,7 +381,7 @@ void repository_commit(const std::vector<std::string>& arguments)
     object["message"] = JsonWriter::escape(git_commit_message(commit));
   }
 
-  git_commit_free(commit);
+  git_object_free(object);
 }
 
 void repository_file(const std::vector<std::string>& arguments)
