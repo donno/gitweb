@@ -473,6 +473,35 @@ void repository_file(const std::vector<std::string>& arguments)
   git_object_free(object);
 }
 
+void repository_next_command(const std::vector<std::string>& arguments)
+{
+  const std::string& repositoryName = arguments.front();
+
+  {
+    git::Repository repository(repositoryName);
+
+    git_index* index;
+    git_repository_index(&index, repository);
+
+    auto files = JsonWriter::array(&std::cout);
+
+    // This is like ls-files
+    size_t ecount = git_index_entrycount(index);
+    for (int i = 0; i < ecount; ++i)
+    {
+      const git_index_entry *e = git_index_get_byindex(index, i);
+
+      auto tagObject = files.object();
+      tagObject["path"] = e->path;
+      tagObject["mode"] = e->mode;
+      tagObject["size"] = e->file_size;
+      tagObject["mtime"] = e->mtime.seconds;
+    }
+
+    git_index_free(index);
+  }
+}
+
 int main(int argc, char* argv[])
 {
   // Command line parser.
@@ -512,6 +541,9 @@ int main(int argc, char* argv[])
   // TODO: Add support for "raw" and change this to use "raw".
   router["api"]["repos"][Router::placeholder]["file"][Router::placeholder] =
     repository_file;
+
+  // A work in progress.
+  router["api"]["repos"][Router::placeholder]["next"] = repository_next_command;
 
   // Perform the route.
   if (!router(argv[1], '/'))
