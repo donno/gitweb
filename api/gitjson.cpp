@@ -449,6 +449,8 @@ int main(int argc, char* argv[])
     return 1;
   }
 
+  git_threads_init();
+
   Router router;
   router["api"] = api_information;
   router["api"]["repos"] = repositories_list;
@@ -469,8 +471,10 @@ int main(int argc, char* argv[])
   if (!router(argv[1], '/'))
   {
     fprintf(stderr, "Unknown resource: %s\n", uri.c_str());
+    git_threads_shutdown();
     return 1;
   }
 
+  git_threads_shutdown();
   return 0;
 }
