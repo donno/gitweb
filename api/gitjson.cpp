@@ -477,28 +477,54 @@ void repository_next_command(const std::vector<std::string>& arguments)
 {
   const std::string& repositoryName = arguments.front();
 
+  // The goal of the following is to implement "ls-tree" that outputs to JSON.
   {
     git::Repository repository(repositoryName);
 
-    git_index* index;
-    git_repository_index(&index, repository);
-
-    auto files = JsonWriter::array(&std::cout);
-
-    // This is like ls-files
-    size_t ecount = git_index_entrycount(index);
-    for (int i = 0; i < ecount; ++i)
+    git_object* object = nullptr;
+    int error = git_revparse_single(&object, repository, "master");
+    if (error)
     {
-      const git_index_entry *e = git_index_get_byindex(index, i);
-
-      auto tagObject = files.object();
-      tagObject["path"] = e->path;
-      tagObject["mode"] = e->mode;
-      tagObject["size"] = e->file_size;
-      tagObject["mtime"] = e->mtime.seconds;
+      fprintf(stderr, "The given reference was bad.");
+      return;
     }
 
-    git_index_free(index);
+    // TODO: Free object.
+    const git_oid* objectId = git_object_id(object);
+
+    git_tree* tree = nullptr;
+
+    {
+      git_commit* commit = nullptr;
+      git_commit_lookup(&commit, repository, objectId);
+      error = git_commit_tree(&tree, commit);
+      if (error)
+      {
+        fprintf(stderr, "Looking up tree from commit\n");
+      }
+      git_commit_free(commit);
+    }
+
+    char hash[64] = {0};
+    auto files = JsonWriter::array(&std::cout);
+    const size_t entryCount = git_tree_entrycount(tree);
+    for (int i = 0; i < entryCount; ++i)
+    {
+      const git_tree_entry* entry = git_tree_entry_byindex(tree, i);
+      git_oid_fmt(hash, git_tree_entry_id(entry));
+
+      // Convert the "mode" parameter to base8 number to be the same as the
+      // "mode" parameter here, http://developer.github.com/v3/git/trees/
+      std::stringstream ss;
+      ss << std::oct << git_tree_entry_filemode(entry);
+
+      auto tagObject = files.object();
+      tagObject["path"] = git_tree_entry_name(entry);
+      tagObject["mode"] = ss.str();
+      tagObject["sha"] = hash;
+    }
+
+    git_tree_free(tree);
   }
 }
 
