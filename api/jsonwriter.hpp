@@ -93,11 +93,13 @@ public:
   // This should be called twice (once for the key, and again for the value).
   JsonWriterObject& operator <<(const char* value);
 
-  // Prefer this version.
+  JsonWriterObject& operator <<(const unsigned int value);
+
   JsonWriterObject& operator [](const char* key);
 
   JsonWriterObject& operator =(const std::string& value);
   JsonWriterObject& operator =(const char* value);
+  JsonWriterObject& operator =(const unsigned int value);
   JsonWriterObject& operator =(const JsonWriterArray& value);
 
   // These should really only be on the class returned by operator [].

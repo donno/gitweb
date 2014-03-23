@@ -127,6 +127,14 @@ JsonWriterObject& JsonWriterObject::operator <<(const char* value)
   return *this;
 }
 
+JsonWriterObject& JsonWriterObject::operator <<(const unsigned int value)
+{
+  // TODO: Write the value straight to the stream.
+  std::stringstream ss;
+  ss << value;
+  return this->operator <<(ss.str().c_str());
+}
+
 JsonWriterObject& JsonWriterObject::operator [](const char* key)
 {
   if (myState == WaitingForKey || myState == WaitingForAnotherKey)
@@ -156,6 +164,16 @@ JsonWriterObject& JsonWriterObject::operator =(const char* value)
   {
     // TODO: Change this to return another class so this isn't an issue.
     // The object is expecting value.
+  }
+
+  return *this;
+}
+
+JsonWriterObject& JsonWriterObject::operator =(const unsigned int value)
+{
+  if (myState == WaitingForValue)
+  {
+    *this << value;
   }
 
   return *this;
