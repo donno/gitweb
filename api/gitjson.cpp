@@ -190,6 +190,16 @@ static int for_tags(
   return 0;
 }
 
+static int for_reference(git_reference *reference, void *payload)
+{
+  std::vector<std::pair<std::string, git_oid>>* tags =
+    reinterpret_cast<std::vector<std::pair<std::string, git_oid>>*>(payload);
+
+  const git_oid* const oid  = git_reference_target(reference);
+  tags->push_back(std::make_pair(git_reference_name(reference), *oid));
+  return 0;
+}
+
 JsonWriterArray& operator <<(
   JsonWriterArray& writer, const std::vector<std::string>& strings)
 {
@@ -282,6 +292,41 @@ void repository_information(const std::vector<std::string>& arguments)
         tagObject["name"] = tag->first;
         tagObject["hash"] = commitHash;
       }
+    }
+  }
+
+  git_repository_free(repo);
+}
+
+void repository_refs(const std::vector<std::string>& arguments)
+{
+  // This function has been developed to output it in the following format:
+  // http://developer.github.com/v3/git/refs/
+
+  const std::string& repositoryName = arguments.front();
+
+  boost::filesystem::path path(repositoriesPath);
+  path /= repositoryName;
+
+  git_repository* repo;
+  int error = git_repository_open(&repo, path.string().c_str());
+
+  if (error != 0) return;
+
+  std::vector<std::pair<std::string, git_oid>> tags;
+  error = git_reference_foreach(repo, for_reference, &tags);
+  {
+    char commitHash[64] = {0};
+    auto aw = JsonWriter::array(&std::cout);
+    for (auto tag = std::begin(tags); tag != std::end(tags); ++tag)
+    {
+      git_oid_fmt(commitHash, &tag->second);
+
+      auto tagObject = aw.object();
+      tagObject["ref"] = tag->first;
+      tagObject["url"] = base_uri() + "/api/repos/" + repositoryName + "/" +
+                         tag->first;
+      tagObject["sha"] = commitHash;
     }
   }
 
@@ -455,6 +500,7 @@ int main(int argc, char* argv[])
   router["api"] = api_information;
   router["api"]["repos"] = repositories_list;
   router["api"]["repos"][Router::placeholder] = repository_information;
+  router["api"]["repos"][Router::placeholder]["refs"] = repository_refs;
   router["api"]["repos"][Router::placeholder]["branches"] = repository_branches;
   router["api"]["repos"][Router::placeholder]["tags"] = repository_tags;
   router["api"]["repos"][Router::placeholder]["tags"][Router::placeholder] =
