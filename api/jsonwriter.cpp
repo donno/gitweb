@@ -129,10 +129,38 @@ JsonWriterObject& JsonWriterObject::operator <<(const char* value)
 
 JsonWriterObject& JsonWriterObject::operator <<(const unsigned int value)
 {
-  // TODO: Write the value straight to the stream.
-  std::stringstream ss;
-  ss << value;
-  return this->operator <<(ss.str().c_str());
+  if (isIndenting)
+  {
+    if (myState == WaitingForAnotherKey)
+    {
+      myOutput << ',' << std::endl;
+    }
+
+    if (myState == WaitingForValue)
+    {
+      myOutput << ": " << value;
+      myState = WaitingForAnotherKey;
+    }
+    else
+    {
+      myOutput << myIndentation << " " << value;
+      myState = WaitingForValue;
+    }
+  }
+  else
+  {
+    if (myState == WaitingForValue)
+    {
+      myOutput << ':' << value;
+      myState = WaitingForAnotherKey;
+    }
+    else
+    {
+      myOutput << value;
+      myState = WaitingForValue;
+    }
+  }
+  return *this;
 }
 
 JsonWriterObject& JsonWriterObject::operator [](const char* key)
