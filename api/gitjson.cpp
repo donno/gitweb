@@ -231,6 +231,26 @@ static void repositories_list()
   }
 }
 
+std::vector<std::string> branch_list(git_repository* repository)
+{
+  std::vector<std::string> branchNames;
+  // Collectu p a list
+  int ret;
+  git_branch_iterator* iterator;
+  git_reference* reference;
+  git_branch_t type;
+  git_branch_iterator_new(&iterator, repository, GIT_BRANCH_LOCAL);
+  while (ret = git_branch_next(&reference, &type, iterator) != GIT_ITEROVER &&
+         ret != 0)
+  {
+    const char* name = nullptr;
+    git_branch_name(&name, reference);
+    branchNames.push_back(name);
+  }
+  git_branch_iterator_free(iterator);
+  return branchNames;
+}
+
 void repository_information(const std::vector<std::string>& arguments)
 {
   const std::string& repositoryName = arguments.front();
@@ -243,10 +263,8 @@ void repository_information(const std::vector<std::string>& arguments)
 
   if (error != 0) return;
 
-  std::vector<std::string> branches;
+  std::vector<std::string> branches = branch_list(repo);
   std::vector<std::pair<std::string, git_oid>> tags;
-
-  git_branch_foreach(repo, GIT_BRANCH_REMOTE, for_branches, &branches);
   git_tag_foreach(repo, for_tags, &tags);
 
   {
@@ -316,9 +334,7 @@ void repository_branches(const std::vector<std::string>& arguments)
 
   if (error != 0) return;
 
-  std::vector<std::string> branches;
-  error = git_branch_foreach(
-    repo, GIT_BRANCH_REMOTE, for_branches, &branches);
+  const std::vector<std::string> branches = branch_list(repo);
   git_repository_free(repo);
 
   {
