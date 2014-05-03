@@ -8,6 +8,7 @@
 
 #include "jsonwriter.hpp"
 
+#include <algorithm>
 #include <iomanip>
 #include <sstream>
 
@@ -309,6 +310,14 @@ JsonWriterArray& JsonWriterArray::operator <<(const char* value)
 JsonWriterArray& JsonWriterArray::operator <<(const std::string& value)
 {
   return this->operator <<(value.c_str());
+}
+
+JsonWriterArray& JsonWriterArray::operator <<(
+  const std::vector<std::string>& strings)
+{
+  std::for_each(std::begin(strings), std::end(strings),
+                [this](const std::string& s) { *this << s; });
+  return *this;
 }
 
 JsonWriterObject JsonWriterArray::object()

@@ -61,6 +61,7 @@
 
 #include <ostream>
 #include <string>
+#include <vector>
 
 class JsonWriterObject;
 class JsonWriterArray;
@@ -127,6 +128,7 @@ public:
 
   JsonWriterArray& operator <<(const char* value);
   JsonWriterArray& operator <<(const std::string& value);
+  JsonWriterArray& operator <<(const std::vector<std::string>& strings);
 
   JsonWriterObject object();
 
