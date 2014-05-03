@@ -9,6 +9,7 @@
 #include "router.hpp"
 #include "jsonwriter.hpp"
 
+#include <ctime>
 #include <functional>
 #include <iostream>
 #include <string>
@@ -406,20 +407,63 @@ void repository_commit(const std::vector<std::string>& arguments)
   git_oid_fmt(commitHash, oid);
 
   const git_signature * author = git_commit_author(commit);
-  const git_time_t time = git_commit_time(commit);
+  const git_signature * comitter = git_commit_committer(commit);
+  const git_oid* treeOid = git_commit_tree_id(commit);
   {
+    char isoDateString[sizeof "2011-10-08T07:07:09Z"];
+
     auto object = JsonWriter::object(&std::cout);
+    {
+      const git_time_t commitTime = git_commit_time(commit);
+      std::strftime(isoDateString, sizeof(isoDateString),
+        "%Y-%m-%dT%H:%M:%SZ", std::gmtime(&commitTime));
 
-    object["hash"] = commitHash;
-    object["author"] = author->name;
-    object["email"] = author->email;
+      auto authorObject = object["author"].object();
+      authorObject["date"] = isoDateString;
+      authorObject["email"] = author->email;
+      authorObject["name"] = author->name;
+    }
 
-    char timeString[sizeof("2011-10-08T07:07:09Z")];
-    strftime(timeString, sizeof(timeString), "%Y-%m-%dT%H:%M:%SZ",
-             gmtime(&time));
-    object["when"] = timeString;
+    {
+      std::strftime(isoDateString, sizeof(isoDateString),
+        "%Y-%m-%dT%H:%M:%SZ", std::gmtime(&comitter->when.time));
+
+      auto authorObject = object["comitter"].object();
+      authorObject["date"] = isoDateString;
+      authorObject["email"] = comitter->email;
+      authorObject["name"] = comitter->name;
+    }
 
     object["message"] = JsonWriter::escape(git_commit_message(commit));
+    {
+      auto parentsArray = object["parents"].array();
+      for (unsigned int i = 0, count = git_commit_parentcount(commit);
+           i < count; ++i)
+      {
+        char parentShaString[GIT_OID_HEXSZ + 1];
+        git_oid_tostr(parentShaString, sizeof(parentShaString),
+                      git_commit_parent_id(commit, i));
+
+        auto parentObject = parentsArray.object();
+        parentObject["sha"] = parentShaString;
+        parentObject["url"] = base_uri() + "/api/repos/" + repositoryName +
+           "/commits/" + commitHash;;
+      }
+    }
+    object["sha"] = commitHash;
+
+    {
+      char treeHash[41];
+      treeHash[40] = '\0';
+      git_oid_fmt(treeHash, treeOid);
+
+      auto treeObject = object["tree"].object();
+      treeObject["sha"] = treeHash;
+      treeObject["url"] = base_uri() + "/api/repos/" + repositoryName +
+        "/tree/" + treeHash;
+    }
+    object["url"] = base_uri() + "/api/repos/" + repositoryName + "/commits/" +
+      commitHash;
   }
 
   git_object_free(object);
