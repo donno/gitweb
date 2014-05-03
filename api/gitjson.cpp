@@ -151,7 +151,7 @@ git::Repository::Repository(const std::string& name)
     const git_error* lastError = giterr_last();
     if (lastError && lastError->message)
     {
-      fprintf(stderr, lastError->message);
+      fprintf(stderr, "%s\n", lastError->message);
     }
     else
     {
