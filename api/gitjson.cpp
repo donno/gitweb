@@ -175,14 +175,11 @@ static int for_tags(
   return 0;
 }
 
-static int for_reference(git_reference *reference, void *payload)
+static const std::string& base_uri()
 {
-  std::vector<std::pair<std::string, git_oid>>* tags =
-    reinterpret_cast<std::vector<std::pair<std::string, git_oid>>*>(payload);
-
-  const git_oid* const oid  = git_reference_target(reference);
-  tags->push_back(std::make_pair(git_reference_name(reference), *oid));
-  return 0;
+  static const char* env = std::getenv("BASE_URI");
+  static const std::string uri(env? env: "");
+  return uri;
 }
 
 static void api_information()
@@ -278,36 +275,42 @@ void repository_information(const std::vector<std::string>& arguments)
 void repository_refs(const std::vector<std::string>& arguments)
 {
   // This function has been developed to output it in the following format:
-  // http://developer.github.com/v3/git/refs/
-
+  // https://developer.github.com/v3/git/refs/
+  //
+  // Example: https://api.github.com/repos/git/git/git/refs
   const std::string& repositoryName = arguments.front();
 
   boost::filesystem::path path(repositoriesPath);
   path /= repositoryName;
 
-  git_repository* repo;
-  int error = git_repository_open(&repo, path.string().c_str());
+  git_repository* repository;
+  int error = git_repository_open(&repository, path.string().c_str());
 
   if (error != 0) return;
 
-  std::vector<std::pair<std::string, git_oid>> tags;
-  error = git_reference_foreach(repo, for_reference, &tags);
   {
-    char commitHash[64] = {0};
+    char commitHash[64] = { 0 };
     auto aw = JsonWriter::array(&std::cout);
-    for (auto tag = std::begin(tags); tag != std::end(tags); ++tag)
+
+    int ret;
+    git_reference* reference = nullptr;
+    git_reference_iterator* iterator = nullptr;
+    git_reference_iterator_new(&iterator, repository);
+    while (ret = git_reference_next(&reference, iterator) != GIT_ITEROVER &&
+      ret != 0)
     {
-      git_oid_fmt(commitHash, &tag->second);
+      git_oid_fmt(commitHash, git_reference_target(reference));
 
       auto tagObject = aw.object();
-      tagObject["ref"] = tag->first;
+      tagObject["ref"] = git_reference_name(reference);
       tagObject["url"] = base_uri() + "/api/repos/" + repositoryName + "/" +
-                         tag->first;
+        git_reference_name(reference);
       tagObject["sha"] = commitHash;
     }
+    git_reference_iterator_free(iterator);
   }
 
-  git_repository_free(repo);
+  git_repository_free(repository);
 }
 
 void repository_tags(const std::vector<std::string>& arguments)
@@ -559,3 +562,5 @@ int main(int argc, char* argv[])
   git_threads_shutdown();
   return 0;
 }
+
+//===--------------------------- End of the file --------------------------===//
