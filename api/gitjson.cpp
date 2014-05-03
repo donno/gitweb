@@ -166,17 +166,6 @@ git::Repository::~Repository()
   myRepository = nullptr;
 }
 
-static int for_branches(
-  const char *branch_name,
-  git_branch_t branch_type,
-  void *payload)
-{
-  std::vector<std::string>* branches =
-    reinterpret_cast<std::vector<std::string>*>(payload);
-  branches->push_back(branch_name);
-  return 0;
-}
-
 static int for_tags(
   const char *name, git_oid *oid, void *payload)
 {
