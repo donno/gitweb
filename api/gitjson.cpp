@@ -225,7 +225,7 @@ std::vector<std::string> branch_list(git_repository* repository)
   git_reference* reference = nullptr;
   git_branch_t type;
   git_branch_iterator_new(&iterator, repository, GIT_BRANCH_LOCAL);
-  while (ret = git_branch_next(&reference, &type, iterator) != GIT_ITEROVER &&
+  while ((ret = git_branch_next(&reference, &type, iterator) != GIT_ITEROVER) &&
          ret != 0)
   {
     const char* name = nullptr;
@@ -297,7 +297,7 @@ void repository_refs(const std::vector<std::string>& arguments)
     git_reference* reference = nullptr;
     git_reference_iterator* iterator = nullptr;
     git_reference_iterator_new(&iterator, repository);
-    while (ret = git_reference_next(&reference, iterator) != GIT_ITEROVER &&
+    while ((ret = git_reference_next(&reference, iterator) != GIT_ITEROVER) &&
       ret != 0)
     {
       git_oid_fmt(commitHash, git_reference_target(reference));
