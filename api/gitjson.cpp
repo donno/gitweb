@@ -414,9 +414,10 @@ void repository_commit(const std::vector<std::string>& arguments)
 
     auto object = JsonWriter::object(&std::cout);
     {
-      const git_time_t commitTime = git_commit_time(commit);
+      const time_t commitTime = git_commit_time(commit);
+      const tm* time = std::gmtime(&commitTime);
       std::strftime(isoDateString, sizeof(isoDateString),
-        "%Y-%m-%dT%H:%M:%SZ", std::gmtime(&commitTime));
+        "%Y-%m-%dT%H:%M:%SZ", time);
 
       auto authorObject = object["author"].object();
       authorObject["date"] = isoDateString;
@@ -425,8 +426,10 @@ void repository_commit(const std::vector<std::string>& arguments)
     }
 
     {
+      const time_t commitTime = comitter->when.time;
+      const tm* time = std::gmtime(&commitTime);
       std::strftime(isoDateString, sizeof(isoDateString),
-        "%Y-%m-%dT%H:%M:%SZ", std::gmtime(&comitter->when.time));
+        "%Y-%m-%dT%H:%M:%SZ", time);
 
       auto authorObject = object["comitter"].object();
       authorObject["date"] = isoDateString;
