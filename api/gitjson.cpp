@@ -140,7 +140,7 @@ git::Repository::Repository(const std::string& name)
   }
   else if (!boost::filesystem::is_directory(myPath))
   {
-    fprintf(stderr, "Could not find repository from 's'\n",
+    fprintf(stderr, "Could not find repository from '%s'\n",
             myPath.string().c_str());
     return;
   }
