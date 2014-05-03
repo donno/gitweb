@@ -244,10 +244,11 @@ static void repositories_list()
 std::vector<std::string> branch_list(git_repository* repository)
 {
   std::vector<std::string> branchNames;
-  // Collectu p a list
+
+  // Collect up a list
   int ret;
-  git_branch_iterator* iterator;
-  git_reference* reference;
+  git_branch_iterator* iterator = nullptr;
+  git_reference* reference = nullptr;
   git_branch_t type;
   git_branch_iterator_new(&iterator, repository, GIT_BRANCH_LOCAL);
   while (ret = git_branch_next(&reference, &type, iterator) != GIT_ITEROVER &&
