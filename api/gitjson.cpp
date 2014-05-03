@@ -304,8 +304,8 @@ void repository_refs(const std::vector<std::string>& arguments)
 
       auto tagObject = aw.object();
       tagObject["ref"] = git_reference_name(reference);
-      tagObject["url"] = base_uri() + "/api/repos/" + repositoryName + "/" +
-        git_reference_name(reference);
+      tagObject["url"] = base_uri() + "/api/repos/" + repositoryName +
+        "/refs/" + git_reference_name(reference);
       tagObject["sha"] = commitHash;
     }
     git_reference_iterator_free(iterator);
@@ -341,6 +341,8 @@ void repository_tags(const std::vector<std::string>& arguments)
         auto tagObject = aw.object();
         tagObject["name"] = tag->first;
         tagObject["hash"] = commitHash;
+        tagObject["url"] = base_uri() + "/api/repos/" + repositoryName +
+          "/tags/" + tag->first;
       }
     }
   }
