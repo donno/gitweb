@@ -29,10 +29,6 @@
 
 static const char* repositoriesPath = "W:/source";
 
-// Helper functions
-JsonWriterArray& operator <<(
-  JsonWriterArray& writer, const std::vector<std::string>& strings);
-
 namespace git
 {
   // Returns the paths of the repositories at the given Path.
@@ -198,15 +194,6 @@ static int for_reference(git_reference *reference, void *payload)
   const git_oid* const oid  = git_reference_target(reference);
   tags->push_back(std::make_pair(git_reference_name(reference), *oid));
   return 0;
-}
-
-JsonWriterArray& operator <<(
-  JsonWriterArray& writer, const std::vector<std::string>& strings)
-{
-  std::for_each(std::begin(strings), std::end(strings),
-                [&writer](const std::string& s) { writer << s; });
-
-  return writer;
 }
 
 static void api_information()
