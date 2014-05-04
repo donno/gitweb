@@ -558,13 +558,93 @@ void repository_commit(const std::vector<std::string>& arguments)
       auto treeObject = object["tree"].object();
       treeObject["sha"] = treeHash;
       treeObject["url"] = base_uri() + "/api/repos/" + repositoryName +
-        "/tree/" + treeHash;
+        "/trees/" + treeHash;
     }
     object["url"] = base_uri() + "/api/repos/" + repositoryName + "/commits/" +
       commitHash;
   }
 
   git_object_free(object);
+}
+
+void repository_tree(const std::vector<std::string>& arguments)
+{
+  // Implements: https://developer.github.com/v3/git/trees/#get-a-tree
+  // Example:
+  //   https://api.github.com/repos/git/git/git/trees/
+  //     7f4837766f5bf8bd1d008ac38470a53f34b4f910
+  const std::string& repositoryName = arguments.front();
+  git::Repository repository(repositoryName);
+
+  if (!repository.IsOpen()) return;
+
+  git_oid objectId;
+  int error = git_oid_fromstr(&objectId, arguments[1].c_str());
+  if (error)
+  {
+    // TODO: Handle errors better.
+    std::exit(1);
+  }
+
+  git_tree* tree = nullptr;
+  error = git_tree_lookup(&tree, repository, &objectId);
+  if (error)
+  {
+    // TODO: Handle errors better.
+    std::exit(1);
+  }
+
+  {
+    char shaString[GIT_OID_HEXSZ + 1];
+    char isoDateString[sizeof "2011-10-08T07:07:09Z"];
+
+    auto object = JsonWriter::object(&std::cout);
+    object["sha"] = arguments[1];
+    object["url"] = base_uri() + "/api/repos/" + repositoryName + "/trees/" +
+      arguments[1];
+    {
+      auto treeArray = object["tree"].array();
+
+      const size_t entryCount = git_tree_entrycount(tree);
+      for (int i = 0; i < entryCount; ++i)
+      {
+        const git_tree_entry* entry = git_tree_entry_byindex(tree, i);
+        git_oid_tostr(shaString, sizeof(shaString), git_tree_entry_id(entry));
+
+        // Convert the "mode" parameter to base8 number to be the same as the
+        // "mode" parameter here, http://developer.github.com/v3/git/trees/
+        std::stringstream ss;
+        ss << std::oct << git_tree_entry_filemode(entry);
+
+        auto tagObject = treeArray.object();
+        tagObject["path"] = git_tree_entry_name(entry);
+        tagObject["mode"] = ss.str();
+        tagObject["sha"] = shaString;
+
+        // Tree objects in git do not store the size of the blobs, so additional
+        // look-ups are required for that.
+        //
+        // First determine if the item is an blob or a tree.
+        if (git_tree_entry_type(entry) == GIT_OBJ_BLOB)
+        {
+          const git_oid* oid = git_tree_entry_id(entry);
+          git_blob* blob = nullptr;
+          git_blob_lookup(&blob, repository, oid);
+          tagObject["type"] = "blob";
+          tagObject["size"] = git_blob_rawsize(blob);
+          tagObject["url"] = base_uri() + "/api/repos/" + repositoryName +
+            "/blobs/" + shaString;
+        }
+        else if(git_tree_entry_type(entry) == GIT_OBJ_TREE)
+        {
+          tagObject["type"] = "tree";
+          tagObject["url"] = base_uri() + "/api/repos/" + repositoryName +
+            "/trees/" + shaString;
+        }
+      }
+    }
+  }
+  git_tree_free(tree);
 }
 
 void repository_file(const std::vector<std::string>& arguments)
@@ -684,6 +764,8 @@ int main(int argc, char* argv[])
     repository_tag;
   router["api"]["repos"][Router::placeholder]["commits"][Router::placeholder] =
     repository_commit;
+  router["api"]["repos"][Router::placeholder]["trees"][Router::placeholder] =
+    repository_tree;
 
   // Output the file with no manipulation (i.e it won't be put into JSON, etc.
   // TODO: Add support for "raw" and change this to use "raw".
