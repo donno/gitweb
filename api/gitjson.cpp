@@ -403,8 +403,72 @@ void repository_branches(const std::vector<std::string>& arguments)
 
 void repository_tag(const std::vector<std::string>& arguments)
 {
-  std::cout << "tag \"" << arguments[1] << "\" for \""  << arguments[0] << '"'
-            << std::endl;
+  // Implements: https://developer.github.com/v3/git/tags/#get-a-tag
+  const std::string& repositoryName = arguments.front();
+  git::Repository repository(repositoryName);
+
+  if (!repository.IsOpen()) return;
+
+  // The argument has to be the SHA.
+  // TODO: Add validation to ensure it is the correct length/valid etc.
+  git_oid objectId;
+  int error = git_oid_fromstr(&objectId, arguments[1].c_str());
+  if (error)
+  {
+    // TODO: Handle errors better.
+    std::exit(1);
+  }
+
+  git_tag *tag = nullptr;
+  error = git_tag_lookup(&tag, repository, &objectId);
+  if (error != 0 || !tag)
+  {
+    // TODO: Handle errors better.
+    std::exit(2);
+  }
+
+  const git_otype type = git_tag_target_type(tag);
+  if (type != GIT_OBJ_COMMIT)
+  {
+    // TODO: Handle errors better.
+    std::exit(3);
+  }
+
+  char isoDateString[sizeof "2011-10-08T07:07:09Z"];
+  const git_signature* const tagger = git_tag_tagger(tag);
+  const time_t tagTime = tagger->when.time;
+  const tm* const time = std::gmtime(&tagTime);
+  std::strftime(isoDateString, sizeof(isoDateString), "%Y-%m-%dT%H:%M:%SZ",
+                time);
+  {
+    auto object = JsonWriter::object(&std::cout);
+
+    object["tag"] = git_tag_name(tag);
+    object["sha"] = arguments[1];
+    object["url"] = base_uri() + "/api/repos/" + repositoryName +
+      "/commits/" + arguments[1];
+    object["message"] = JsonWriter::escape(git_tag_message(tag));
+    {
+      auto taggerObject = object["tagger"].object();
+      taggerObject["name"] = tagger->name;
+      taggerObject["email"] = tagger->email;
+      taggerObject["date"] = isoDateString;
+
+    }
+
+    {
+      auto objectObject = object["object"].object();
+      objectObject["type"] = "commit";
+
+      char targetShaString[GIT_OID_HEXSZ + 1];
+      git_oid_tostr(targetShaString, sizeof(targetShaString),
+                    git_tag_target_id(tag));
+      objectObject["sha"] = targetShaString;
+      objectObject["url"] = base_uri() + "/api/repos/" + repositoryName +
+        "/commits/" + targetShaString;
+    }
+  }
+
 }
 
 void repository_commit(const std::vector<std::string>& arguments)
