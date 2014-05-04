@@ -300,13 +300,42 @@ void repository_refs(const std::vector<std::string>& arguments)
     while ((ret = git_reference_next(&reference, iterator) != GIT_ITEROVER) &&
       ret != 0)
     {
-      git_oid_fmt(commitHash, git_reference_target(reference));
-
       auto tagObject = aw.object();
       tagObject["ref"] = git_reference_name(reference);
       tagObject["url"] = base_uri() + "/api/repos/" + repositoryName +
         "/refs/" + git_reference_name(reference);
-      tagObject["sha"] = commitHash;
+
+      auto objectObject = tagObject["object"].object();
+      const git_ref_t type = git_reference_type(reference);
+      if (type == GIT_REF_OID)
+      {
+        git_oid_fmt(commitHash, git_reference_target(reference));
+        objectObject["sha"] = commitHash;
+
+        const git_oid* const peeled = git_reference_target_peel(reference);
+        if (peeled)
+        {
+          objectObject["type"] = "tag";
+          objectObject["url"] = base_uri() + "/api/repos/" + repositoryName +
+            "/tags/" + commitHash;
+
+          // This is not part of the GitHub API, but is provided as it didn't
+          // require any additional cost to look-up.
+          git_oid_fmt(commitHash, peeled);
+          objectObject["target_sha"] = commitHash;
+        }
+        else
+        {
+          objectObject["type"] = "commit";
+          objectObject["url"] = base_uri() + "/api/repos/" + repositoryName +
+            "/commits/" + commitHash;
+        }
+      }
+      else if (type == GIT_REF_SYMBOLIC)
+      {
+        objectObject["target"] = git_reference_symbolic_target(reference);
+        objectObject["type"] = "symbolic";
+      }
     }
     git_reference_iterator_free(iterator);
   }
