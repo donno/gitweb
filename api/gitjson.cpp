@@ -18,8 +18,21 @@
 #include <algorithm>
 #include <iterator>
 
+#ifdef GITJSON_USE_BOOST_FILESYSTEM
 #include "boost/filesystem.hpp"
 #include "boost/filesystem/path.hpp"
+#else
+#include <filesystem>
+
+namespace boost
+{
+  namespace filesystem
+  {
+    using namespace std::tr2::sys;
+  }
+}
+
+#endif
 
 #include "libgit2/include/git2.h"
 
@@ -196,9 +209,11 @@ std::vector<boost::filesystem::path> git::repositories(
 }
 
 git::Repository::Repository(const std::string& name)
-: myPath(boost::filesystem::path(repositoriesPath) / name),
+: myPath(boost::filesystem::path(repositoriesPath)),
   myRepository(nullptr)
 {
+  myPath /= name;
+
   const boost::filesystem::path path(repositoriesPath);
   if (!boost::filesystem::is_directory(path))
   {
@@ -278,7 +293,11 @@ static void repositories_list()
     auto aw = JsonWriter::array(&std::cout);
     for (auto repo = std::begin(repos); repo != std::end(repos); ++repo)
     {
+#ifdef GITJSON_USE_BOOST_FILESYSTEM
       aw << repo->stem().string();
+#else
+      aw << repo->stem();
+#endif
     }
   }
 }
