@@ -37,6 +37,13 @@ class Forwarder(SimpleHTTPRequestHandler):
     stdout, stderr = self.execute(self.path)
     response = stderr if stderr else stdout
 
+    if isinstance(response, tuple):
+      # This handles if reponse is made up of (lines, content length).
+      response, contentLength = response
+    else:
+      contentLength = len(response)
+
+
     self.send_response(500 if stderr else 200)
     if '/file/' in self.path:
       self.send_header("Content-type", "application/octet-stream")
@@ -46,10 +53,75 @@ class Forwarder(SimpleHTTPRequestHandler):
                          filename)
     else:
       self.send_header("Content-type", "application/json; charset=utf-8")
-    self.send_header("Content-length", len(response))
-    self.end_headers()
-    self.wfile.write(response)
 
+    self.send_header("Content-length", contentLength)
+    self.end_headers()
+    if isinstance(response, list):
+      for element in response:
+        self.wfile.write(element)
+    else:
+      self.wfile.write(response)
+
+class GitRunner(Forwarder):
+  """
+  Spawn a process running gitjson that stays arounds.
+
+  The intention is to elimiate the overhead of having to start a process and
+  set-up gitjson each time a request is made.
+  """
+
+  gitjsonexe = r'build\Debug\bin\gitjson.exe'
+
+  gitjsonprocess = None
+
+  def execute(self, path):
+    """Executes the git json executable and returns the results."""
+
+    # Spawn the process if it wasn't started already.
+    process = self.process()
+
+    # Send the command
+    process.stdin.write(path + '\n')
+
+    # Read the output
+    length = 0
+    lines = []
+    line = process.stdout.readline()
+    while line and not line.startswith(chr(4)):
+      lines.append(line)
+      length += len(line)
+      line = process.stdout.readline()
+
+    return (lines, length), ''
+
+  def process(self):
+    """
+    Returns the handle to the gitjson process.
+
+    If the process wasn't spawned (opened) yet then it opens it.
+    """
+    if not GitRunner.gitjsonprocess:
+      env = {
+        'BASE_URI': 'http://%s:%d' % (
+          self.server.server_name, self.server.server_port),
+        }
+
+      stderr = tempfile.TemporaryFile(mode="w+t")
+      try:
+        GitRunner.gitjsonprocess = subprocess.Popen(
+          args=[self.gitjsonexe, '-'],
+          executable=self.gitjsonexe,
+          env=env,
+          stdin=subprocess.PIPE,
+          stdout=subprocess.PIPE,
+          stderr=stderr,
+          )
+
+      except EnvironmentError, e:
+        print 'error: invoking process: ', e
+        return None
+
+    return GitRunner.gitjsonprocess
 
 class GitForwarder(Forwarder):
   """
@@ -69,6 +141,7 @@ class GitForwarder(Forwarder):
       'BASE_URI': 'http://%s:%d' % (
         self.server.server_name, self.server.server_port),
       }
+
     try:
       p = subprocess.Popen(
         args=[self.gitjsonexe, self.path],
@@ -97,7 +170,15 @@ if __name__ == '__main__':
       port = 7723
   server_address = ('', port)
 
-  httpd = BaseHTTPServer.HTTPServer(server_address, GitForwarder)
+  # At the moment there is very little benefit of reusing the process as all
+  # it saves is the process creation and setting up of routes. The git repo
+  # is closed after it response to each request so its in-memory caches etc
+  # are cleared.
+  reuseProcess = False
+  if reuseProcess:
+    httpd = BaseHTTPServer.HTTPServer(server_address, GitRunner)
+  else:
+    httpd = BaseHTTPServer.HTTPServer(server_address, GitForwarder)
 
   sa = httpd.socket.getsockname()
   print "Serving HTTP on", sa[0], "port", sa[1], "..."
