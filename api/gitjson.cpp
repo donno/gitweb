@@ -360,6 +360,47 @@ void repository_information(const std::vector<std::string>& arguments)
   git_repository_free(repo);
 }
 
+// Populate the object property of a reference.
+void populate_reference_object(git_reference* reference,
+                               const std::string& repositoryName,
+                               JsonWriterObject& object,
+                               char* commitHash = nullptr)
+{
+  char commitHashStorage[64] = { 0 };
+  if (!commitHash) commitHash = commitHashStorage;
+
+  const git_ref_t type = git_reference_type(reference);
+  if (type == GIT_REF_OID)
+  {
+    git_oid_fmt(commitHash, git_reference_target(reference));
+    object["sha"] = commitHash;
+
+    const git_oid* const peeled = git_reference_target_peel(reference);
+    if (peeled)
+    {
+      object["type"] = "tag";
+      object["url"] = base_uri() + "/api/repos/" + repositoryName +
+        "/tags/" + commitHash;
+
+      // This is not part of the GitHub API, but is provided as it didn't
+      // require any additional cost to look-up.
+      git_oid_fmt(commitHash, peeled);
+      object["target_sha"] = commitHash;
+    }
+    else
+    {
+      object["type"] = "commit";
+      object["url"] = base_uri() + "/api/repos/" + repositoryName +
+        "/commits/" + commitHash;
+    }
+  }
+  else if (type == GIT_REF_SYMBOLIC)
+  {
+    object["target"] = git_reference_symbolic_target(reference);
+    object["type"] = "symbolic";
+  }
+}
+
 void repository_refs(const std::vector<std::string>& arguments)
 {
   // This function has been developed to output it in the following format:
@@ -393,41 +434,62 @@ void repository_refs(const std::vector<std::string>& arguments)
         "/refs/" + git_reference_name(reference);
 
       auto objectObject = tagObject["object"].object();
-      const git_ref_t type = git_reference_type(reference);
-      if (type == GIT_REF_OID)
-      {
-        git_oid_fmt(commitHash, git_reference_target(reference));
-        objectObject["sha"] = commitHash;
-
-        const git_oid* const peeled = git_reference_target_peel(reference);
-        if (peeled)
-        {
-          objectObject["type"] = "tag";
-          objectObject["url"] = base_uri() + "/api/repos/" + repositoryName +
-            "/tags/" + commitHash;
-
-          // This is not part of the GitHub API, but is provided as it didn't
-          // require any additional cost to look-up.
-          git_oid_fmt(commitHash, peeled);
-          objectObject["target_sha"] = commitHash;
-        }
-        else
-        {
-          objectObject["type"] = "commit";
-          objectObject["url"] = base_uri() + "/api/repos/" + repositoryName +
-            "/commits/" + commitHash;
-        }
-      }
-      else if (type == GIT_REF_SYMBOLIC)
-      {
-        objectObject["target"] = git_reference_symbolic_target(reference);
-        objectObject["type"] = "symbolic";
-      }
+      populate_reference_object(reference, repositoryName, objectObject);
     }
     git_reference_iterator_free(iterator);
   }
 
   git_repository_free(repository);
+}
+
+void repository_ref(const std::vector<std::string>& arguments)
+{
+  // This function has been developed to output it in the following format:
+  // https://developer.github.com/v3/git/refs/
+  //
+  // Example: https://api.github.com/repos/git/git/git/refs/heads/master
+
+  const std::string& repositoryName = arguments.front();
+
+  boost::filesystem::path path(repositoriesPath);
+  path /= repositoryName;
+
+  // The long name for the reference (e.g. HEAD, refs/heads/master, refs/tags/v0.1.0)
+  std::stringstream referenceName;
+  referenceName << "refs/";
+  std::copy(std::begin(arguments) + 1, std::end(arguments) - 1,
+            std::ostream_iterator<std::string>(referenceName, "/"));
+  referenceName << arguments.back();
+
+  git_repository* repo = nullptr;
+  int error = git_repository_open(&repo, path.string().c_str());
+  //if (error != 0) return;
+
+  git_reference* reference = nullptr;
+  error = git_reference_lookup(&reference, repo, referenceName.str().c_str());
+  if (error == GIT_ENOTFOUND)
+  {
+    std::cerr << "Couldn't find the reference" << std::endl;
+    return;
+  }
+  else if (error == GIT_EINVALIDSPEC)
+  {
+    std::cerr << "Invalid reference spec" << std::endl;
+    return;
+  }
+  else if (error != 0) return;
+
+  {
+    auto object = JsonWriter::object(&std::cout);
+    object["ref"] = referenceName.str();
+    object["url"] = base_uri() + "/api/repos/" + repositoryName +
+      "/refs/" + referenceName.str();
+
+    {
+      auto objectObject = object["object"].object();
+      populate_reference_object(reference, repositoryName, objectObject);
+    }
+  }
 }
 
 void repository_tags(const std::vector<std::string>& arguments)
@@ -848,12 +910,13 @@ int main(int argc, char* argv[])
   }
 
   git_threads_init();
-
   Router router;
   router["api"] = api_information;
   router["api"]["repos"] = repositories_list;
   router["api"]["repos"][Router::placeholder] = repository_information;
   router["api"]["repos"][Router::placeholder]["refs"] = repository_refs;
+  router["api"]["repos"][Router::placeholder]["refs"][
+    Router::placeholder_remaining] = repository_ref;
   router["api"]["repos"][Router::placeholder]["branches"] = repository_branches;
   router["api"]["repos"][Router::placeholder]["tags"] = repository_tags;
   router["api"]["repos"][Router::placeholder]["tags"][Router::placeholder] =
