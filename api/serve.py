@@ -52,6 +52,11 @@ class Forwarder(SimpleHTTPRequestHandler):
 
 
 class GitForwarder(Forwarder):
+  """
+  Spawns a process running gitjson each time a request is made and passes it
+  the given URI on the command line and reads its output and forwards it onto
+  the requester.
+  """
   gitjsonexe = r'build\Debug\bin\gitjson.exe'
 
   def execute(self, path):
