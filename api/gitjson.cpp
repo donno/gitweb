@@ -29,6 +29,74 @@
 #define VERSION "0.1.0"
 
 static const char* repositoriesPath = "W:/source";
+namespace util
+{
+
+  const static char Base64Lookup[] =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+  // Base64 encode the data from Content to Content + Size and insert new lines
+  // every 60 characters.
+  std::string Base64Encode(const void * Content, git_off_t Size, bool NewLines)
+;
+}
+
+std::string util::Base64Encode(
+  const void * Content,
+  git_off_t Size,
+  bool NewLines)
+{
+  const char padCharacter('=');
+
+  // Determine how big the output string will need to be.
+  size_t encodedSize = ((Size / 3) + (Size % 3 > 0)) * 4;
+  if (NewLines) encodedSize += encodedSize / 60;
+
+  // Implementation taken from the C++ version from:
+  // http://en.wikibooks.org/wiki/Algorithm_Implementation/Miscellaneous/Base64
+  std::string encodedString;
+  encodedString.reserve(encodedSize);
+
+  long temp;
+  const char* cursor = static_cast<const char*>(Content);
+
+  for (size_t idx = 0, rowCount = 4; idx < Size / 3; ++idx, rowCount += 4)
+  {
+    temp  = (*cursor++) << 16; //Convert to big endian
+    temp += (*cursor++) << 8;
+    temp += (*cursor++);
+    encodedString.append(1, Base64Lookup[(temp & 0x00FC0000) >> 18]);
+    encodedString.append(1, Base64Lookup[(temp & 0x0003F000) >> 12]);
+    encodedString.append(1, Base64Lookup[(temp & 0x00000FC0) >> 6 ]);
+    encodedString.append(1, Base64Lookup[(temp & 0x0000003F)      ]);
+
+    if (NewLines && rowCount == 60)
+    {
+      encodedString.append("\\n");
+      rowCount = 0;
+    }
+  }
+
+  switch(Size % 3)
+  {
+  case 1:
+    temp  = (*cursor++) << 16; //Convert to big endian
+    encodedString.append(1, Base64Lookup[(temp & 0x00FC0000) >> 18]);
+    encodedString.append(1, Base64Lookup[(temp & 0x0003F000) >> 12]);
+    encodedString.append(2, padCharacter);
+    break;
+  case 2:
+    temp  = (*cursor++) << 16; //Convert to big endian
+    temp += (*cursor++) << 8;
+    encodedString.append(1, Base64Lookup[(temp & 0x00FC0000) >> 18]);
+    encodedString.append(1, Base64Lookup[(temp & 0x0003F000) >> 12]);
+    encodedString.append(1, Base64Lookup[(temp & 0x00000FC0) >> 6 ]);
+    encodedString.append(1, padCharacter);
+    break;
+  }
+
+  return encodedString;
+}
 
 namespace git
 {
@@ -647,6 +715,48 @@ void repository_tree(const std::vector<std::string>& arguments)
   git_tree_free(tree);
 }
 
+
+void repository_blob(const std::vector<std::string>& arguments)
+{
+  // Implements: https://developer.github.com/v3/git/blobs/#get-a-blob
+  //
+  // Example:
+  //   https://api.github.com/repos/git/git/git/blobs/
+  //     5e98806c6cc246acef5f539ae191710a0c06ad3f
+  //
+  // NOTE: GitHub's API only supports up to 100 megabytes.
+  //
+  // The API is suppose to support both applicaiton/json or 'raw' at the moment
+  // this is only the "json" one (see /file/ for details on the raw option).
+  const std::string& repositoryName = arguments.front();
+  git::Repository repository(repositoryName);
+
+  if (!repository.IsOpen()) return;
+
+  git_oid objectId;
+  const int error = git_oid_fromstr(&objectId, arguments[1].c_str());
+  git_blob* blob = nullptr;
+  git_blob_lookup(&blob, repository, &objectId);
+
+  // TODO: Determine if it needs to be base64 encoded.
+  const bool base64Encoded = true;
+
+  {
+    auto object = JsonWriter::object(&std::cout);
+
+    // TODO: Instead of creating a temporary string for the base64, the output
+    // could be written directly to the stream.
+    object["content"] = util::Base64Encode(git_blob_rawcontent(blob),
+                                           git_blob_rawsize(blob),
+                                           true);
+     object["encoding"] = (base64Encoded ? "base64" : "utf-8");
+    object["sha"] = arguments[1];
+    object["url"] = base_uri() + "/api/repos/" + repositoryName +
+      "/blobs/" + arguments[1];
+    object["size"] = git_blob_rawsize(blob);
+  }
+}
+
 void repository_file(const std::vector<std::string>& arguments)
 {
   // Writes out a given file from the repository, as-is, with no additional
@@ -731,6 +841,8 @@ int main(int argc, char* argv[])
     repository_commit;
   router["api"]["repos"][Router::placeholder]["trees"][Router::placeholder] =
     repository_tree;
+  router["api"]["repos"][Router::placeholder]["blobs"][Router::placeholder] =
+    repository_blob;
 
   // Output the file with no manipulation (i.e it won't be put into JSON, etc.
   // TODO: Add support for "raw" and change this to use "raw".
