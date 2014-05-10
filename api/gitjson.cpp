@@ -814,13 +814,15 @@ int main(int argc, char* argv[])
   if (argc != 2)
   {
     fprintf(stderr, "usage: %s <uri>\n", argv[0]);
+    fprintf(stderr, "       %s -\n", argv[0]);
     return 1;
   }
 
   const std::string uri(argv[1]);
 
   // Check if it starts with /api/
-  if (uri.find("/api/", 0, 5) == std::string::npos)
+  if (uri.find("/api/", 0, 5) == std::string::npos &&
+      uri != "-")
   {
     fprintf(stderr, "The URI didn't start with /api/");
     return 1;
@@ -852,12 +854,31 @@ int main(int argc, char* argv[])
   // A work in progress.
   router["api"]["repos"][Router::placeholder]["next"] = repository_next_command;
 
-  // Perform the route.
-  if (!router(argv[1], '/'))
+  if (uri == "-")
   {
-    fprintf(stderr, "Unknown resource: %s\n", uri.c_str());
-    git_threads_shutdown();
-    return 1;
+    // Read the URI from standard in.
+    std::string uriFromStandardIn;
+    while (!std::getline(std::cin, uriFromStandardIn).eof() &&
+           uriFromStandardIn != "\4")
+    {
+      // Perform the route.
+      if (!router(uriFromStandardIn.c_str(), '/'))
+      {
+        fprintf(stderr, "Unknown resource: %s\n", uri.c_str());
+        git_threads_shutdown();
+        return 1;
+      }
+    }
+  }
+  else
+  {
+    // Perform the route.
+    if (!router(argv[1], '/'))
+    {
+      fprintf(stderr, "Unknown resource: %s\n", uri.c_str());
+      git_threads_shutdown();
+      return 1;
+    }
   }
 
   git_threads_shutdown();
