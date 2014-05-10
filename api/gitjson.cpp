@@ -868,6 +868,7 @@ int main(int argc, char* argv[])
         git_threads_shutdown();
         return 1;
       }
+      std::cout << "\04\n";
     }
   }
   else
