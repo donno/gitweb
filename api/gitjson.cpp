@@ -430,8 +430,8 @@ void repository_refs(const std::vector<std::string>& arguments)
     {
       auto tagObject = aw.object();
       tagObject["ref"] = git_reference_name(reference);
-      tagObject["url"] = base_uri() + "/api/repos/" + repositoryName +
-        "/refs/" + git_reference_name(reference);
+      tagObject["url"] = base_uri() + "/api/repos/" + repositoryName + '/' +
+        git_reference_name(reference);
 
       auto objectObject = tagObject["object"].object();
       populate_reference_object(reference, repositoryName, objectObject);
@@ -463,7 +463,7 @@ void repository_ref(const std::vector<std::string>& arguments)
 
   git_repository* repo = nullptr;
   int error = git_repository_open(&repo, path.string().c_str());
-  //if (error != 0) return;
+  if (error != 0) return;
 
   git_reference* reference = nullptr;
   error = git_reference_lookup(&reference, repo, referenceName.str().c_str());
@@ -482,8 +482,8 @@ void repository_ref(const std::vector<std::string>& arguments)
   {
     auto object = JsonWriter::object(&std::cout);
     object["ref"] = referenceName.str();
-    object["url"] = base_uri() + "/api/repos/" + repositoryName +
-      "/refs/" + referenceName.str();
+    object["url"] = base_uri() + "/api/repos/" + repositoryName + '/' +
+      referenceName.str();
 
     {
       auto objectObject = object["object"].object();
