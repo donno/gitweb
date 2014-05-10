@@ -41,17 +41,24 @@ public:
   typedef void (* CallFunction)(void);
   typedef void (* CallPlaceholderFunction)(const std::vector<std::string>&);
 
-  Router() : mySelfFunction(nullptr), myPlaceholderFunction(nullptr) {}
+  Router() : mySelfFunction(nullptr), myPlaceholderFunction(nullptr),
+             isSunkingUpAllRemainingTerms(false) {}
 
   // Used to indicate that this route takes a placeholder and passes it to the
   // function.
   typedef int placeholder_t;
   static const int placeholder = 0;
 
+  // Used to indicate that this route takes all the remaining arguments.
+  // TODO: Ensure this can only be used once.
+  struct placeholder_remaining_t { int v;};
+  static const placeholder_remaining_t placeholder_remaining;
+
   // Methods for configuring the routing information.
   Router & operator =(CallFunction function);
   Router & operator [](const char* term);
   RouterWithPlaceholder operator [](placeholder_t);
+  RouterWithPlaceholder operator [](placeholder_remaining_t);
 
   // Methods for invoking the functions. Returns false is no route is present.
   //
@@ -74,22 +81,35 @@ private:
   // anything) value.
   CallPlaceholderFunction myPlaceholderFunction;
 
+  bool isSunkingUpAllRemainingTerms;
+
   std::map<std::string, Router> myRoutes;
 };
 
 class RouterWithPlaceholder
 {
 public:
-  RouterWithPlaceholder(Router& router, bool isPlaceholder)
-  : myRouter(router), isPlaceholder(isPlaceholder) {}
+  RouterWithPlaceholder(Router& router,
+                        bool isPlaceholder,
+                        bool isSunkingUpAllRemainingPlaceholders)
+    : myRouter(router),
+      isPlaceholder(isPlaceholder),
+      isSunkingUpAllRemainingPlaceholders(isSunkingUpAllRemainingPlaceholders)
+    {
+    }
 
   // Methods for configuring the routing information.
   RouterWithPlaceholder & operator =(Router::CallPlaceholderFunction function);
   RouterWithPlaceholder operator [](const char* term)
   {
-    return RouterWithPlaceholder(myRouter.operator [](term), false);
+    return RouterWithPlaceholder(myRouter.operator [](term), false, false);
   }
   RouterWithPlaceholder operator [](Router::placeholder_t v)
+  {
+    return myRouter.operator [](v);
+  }
+
+  RouterWithPlaceholder operator [](Router::placeholder_remaining_t v)
   {
     return myRouter.operator [](v);
   }
@@ -98,6 +118,7 @@ private:
   Router& myRouter;
 
   bool isPlaceholder;
+  bool isSunkingUpAllRemainingPlaceholders;
 };
 
 //===--------------------------- End of the file --------------------------===//

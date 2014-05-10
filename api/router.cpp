@@ -14,6 +14,8 @@
 #include <map>
 #include <vector>
 
+const Router::placeholder_remaining_t Router::placeholder_remaining = { 0 };
+
 Router & Router::operator [](const char* term)
 {
   auto route = myRoutes.insert(std::make_pair(std::string(term), Router()));
@@ -55,6 +57,12 @@ bool Router::operator()(const std::vector<std::string>& terms) const
       // The last term was just a place-holder so stop.
       if (term == std::end(terms))
       {
+        lastTermIsPlaceholder = true;
+        break;
+      }
+      else if (router->isSunkingUpAllRemainingTerms)
+      {
+        placeholders.insert(placeholders.end(), term, std::end(terms));
         lastTermIsPlaceholder = true;
         break;
       }
@@ -102,7 +110,12 @@ bool Router::operator()(const std::vector<std::string>& terms) const
 
 RouterWithPlaceholder Router::operator [](placeholder_t)
 {
-  return RouterWithPlaceholder(*this, true);
+  return RouterWithPlaceholder(*this, true, false);
+}
+
+RouterWithPlaceholder Router::operator [](placeholder_remaining_t)
+{
+  return RouterWithPlaceholder(*this, true, true);
 }
 
 Router & Router::operator =(CallFunction function)
@@ -122,6 +135,8 @@ RouterWithPlaceholder::operator =(Router::CallPlaceholderFunction function)
   {
     myRouter.myPlaceholderSelfFunction = function;
   }
+
+  myRouter.isSunkingUpAllRemainingTerms = isSunkingUpAllRemainingPlaceholders;
   return *this;
 }
 
