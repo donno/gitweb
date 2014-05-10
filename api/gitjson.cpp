@@ -595,7 +595,7 @@ void repository_tag(const std::vector<std::string>& arguments)
     object["tag"] = git_tag_name(tag);
     object["sha"] = arguments[1];
     object["url"] = base_uri() + "/api/repos/" + repositoryName +
-      "/commits/" + arguments[1];
+      "/tags/" + arguments[1];
     object["message"] = JsonWriter::escape(git_tag_message(tag));
     {
       auto taggerObject = object["tagger"].object();

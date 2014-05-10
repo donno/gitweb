@@ -89,6 +89,53 @@ class ApiTester(unittest.TestCase):
     self.assertIn('hash', tag)
     self.assertIn('name', tag)
 
+  def test_tag(self):
+    """Tests getting a single in a repository."""
+    r = requests.get(self.baseUri +
+                     '/tags/683c35c9ade6e241df832a2f82c521264f6a9b7f')
+    self.assertEqual(r.status_code, 200)
+    self.assertEqual(r.headers['content-type'], self.jsonContentType)
+    self.assertEqual(r.encoding, 'utf-8')
+
+    response = r.json()
+
+    self.assertIn('tag', response)
+    self.assertIn('sha', response)
+    self.assertEqual(response['sha'],
+                     '683c35c9ade6e241df832a2f82c521264f6a9b7f')
+
+    self.assertIn('url', response)
+    self.assertTrue(response['url'].endswith(
+        '/tags/683c35c9ade6e241df832a2f82c521264f6a9b7f'))
+
+    self.assertIn('message', response)
+    self.assertIn('tagger', response)
+    self.assertIn('object', response)
+
+    self.assertIsInstance(response['tagger'], dict)
+    self.assertIsInstance(response['object'], dict)
+
+    tagger = response['tagger']
+    self.assertIn('name', tagger)
+    self.assertIn('email', tagger)
+    self.assertIn('date', tagger)
+
+    self.assertEqual(tagger['name'], 'Junio C Hamano')
+    self.assertEqual(tagger['email'], 'gitster@pobox.com')
+    self.assertEqual(tagger['date'], '2010-10-22T00:14:53Z')
+
+    objectValue = response['object']
+    self.assertIn('type', objectValue)
+    self.assertIn('sha', objectValue)
+    self.assertIn('url', objectValue)
+
+    self.assertEqual(objectValue['type'], 'commit')
+    self.assertEqual(objectValue['sha'],
+                     '8a90438506d3b7c8ef8bd802b7ed10c1f12da1d0')
+    self.assertTrue(objectValue['url'].endswith(
+        'commits/8a90438506d3b7c8ef8bd802b7ed10c1f12da1d0'))
+
+
   def test_refs(self):
     """Tests getting the list of references in a repository."""
     r = requests.get(self.baseUri + '/refs')
