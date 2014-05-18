@@ -302,25 +302,34 @@ static void repositories_list()
   }
 }
 
-std::vector<std::string> branch_list(git_repository* repository)
+void branches(git_repository* repository,
+              const std::string& repositoryName,
+              JsonWriterArray* array)
 {
-  std::vector<std::string> branchNames;
-
-  // Collect up a list
+  char shaString[GIT_OID_HEXSZ + 1];
   int ret;
   git_branch_iterator* iterator = nullptr;
   git_reference* reference = nullptr;
   git_branch_t type;
   git_branch_iterator_new(&iterator, repository, GIT_BRANCH_LOCAL);
-  while ((ret = git_branch_next(&reference, &type, iterator) != GIT_ITEROVER) &&
-         ret != 0)
+  while ((ret = git_branch_next(&reference, &type, iterator) != GIT_ITEROVER)
+         && ret != 0)
   {
     const char* name = nullptr;
     git_branch_name(&name, reference);
-    branchNames.push_back(name);
+    git_oid_tostr(shaString, sizeof(shaString),
+                  git_reference_target(reference));
+
+    auto branchObject = array->object();
+    branchObject["name"] = name;
+    {
+      auto commitObject = branchObject["commit"].object();
+      commitObject["sha"] = shaString;
+      commitObject["url"] = base_uri() + "/api/repos/" + repositoryName +
+        "/commits/" + shaString;
+    }
   }
   git_branch_iterator_free(iterator);
-  return branchNames;
 }
 
 void repository_information(const std::vector<std::string>& arguments)
@@ -335,7 +344,6 @@ void repository_information(const std::vector<std::string>& arguments)
 
   if (error != 0) return;
 
-  std::vector<std::string> branches = branch_list(repo);
   std::vector<std::pair<std::string, git_oid>> tags;
   git_tag_foreach(repo, for_tags, &tags);
 
@@ -343,7 +351,11 @@ void repository_information(const std::vector<std::string>& arguments)
     char commitHash[64] = {0};
     auto object = JsonWriter::object(&std::cout);
     object["repository"] = repositoryName;
-    object["branches"].array() << branches;
+    {
+      auto branches = object["branches"].array();
+      ::branches(repo, repositoryName, &branches);
+    }
+
     {
       auto aw = object["tags"].array();
       for (auto tag = std::begin(tags); tag != std::end(tags); ++tag)
@@ -353,6 +365,8 @@ void repository_information(const std::vector<std::string>& arguments)
         auto tagObject = aw.object();
         tagObject["name"] = tag->first;
         tagObject["hash"] = commitHash;
+        tagObject["url"] = base_uri() + "/api/repos/" + repositoryName + '/' +
+          tag->first;
       }
     }
   }
@@ -530,23 +544,20 @@ void repository_tags(const std::vector<std::string>& arguments)
 
 void repository_branches(const std::vector<std::string>& arguments)
 {
+  // Implements: https://developer.github.com/v3/repos/#list-branches
   const std::string& repositoryName = arguments.front();
 
   boost::filesystem::path path(repositoriesPath);
   path /= repositoryName;
 
-  git_repository* repo;
-  int error = git_repository_open(&repo, path.string().c_str());
+  git_repository* repository;
+  int error = git_repository_open(&repository, path.string().c_str());
 
   if (error != 0) return;
 
-  const std::vector<std::string> branches = branch_list(repo);
-  git_repository_free(repo);
-
   {
-    auto object = JsonWriter::object(&std::cout);
-    object["repository"] = repositoryName;
-    object["branches"].array() << branches;
+    auto array = JsonWriter::array(&std::cout);
+    branches(repository, repositoryName, &array);
   }
 }
 

@@ -48,7 +48,7 @@ class ApiTester(unittest.TestCase):
     self.assertIsInstance(response['tags'], list)
     self.assertIsInstance(response['branches'], list)
 
-    self.assertIn('master', response['branches'])
+    self.assertIn('master', (branch['name'] for branch in response['branches']))
 
   def test_branches(self):
     """Tests getting the list of branches in a repository."""
@@ -59,12 +59,9 @@ class ApiTester(unittest.TestCase):
 
     response = r.json()
 
-    self.assertEqual(response['repository'], 'git')
-    self.assertIn('branches', response)
+    self.assertIsInstance(response, list)
 
-    self.assertIsInstance(response['branches'], list)
-
-    self.assertIn('master', response['branches'])
+    self.assertIn('master', (branch['name'] for branch in response))
 
   def test_tags(self):
     """Tests getting the list of tags in a repository."""
@@ -90,7 +87,7 @@ class ApiTester(unittest.TestCase):
     self.assertIn('name', tag)
 
   def test_tag(self):
-    """Tests getting a single in a repository."""
+    """Tests getting a single reference in a repository."""
     r = requests.get(self.baseUri +
                      '/tags/683c35c9ade6e241df832a2f82c521264f6a9b7f')
     self.assertEqual(r.status_code, 200)
@@ -134,7 +131,6 @@ class ApiTester(unittest.TestCase):
                      '8a90438506d3b7c8ef8bd802b7ed10c1f12da1d0')
     self.assertTrue(objectValue['url'].endswith(
         'commits/8a90438506d3b7c8ef8bd802b7ed10c1f12da1d0'))
-
 
   def test_refs(self):
     """Tests getting the list of references in a repository."""
