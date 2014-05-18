@@ -332,6 +332,53 @@ void branches(git_repository* repository,
   git_branch_iterator_free(iterator);
 }
 
+void commit(
+  const git_commit* const commit,
+  const std::string& repositoryName,
+  JsonWriterObject* object)
+{
+  char shaString[GIT_OID_HEXSZ + 1];
+  char isoDateString[sizeof "2011-10-08T07:07:09Z"];
+  const git_signature * author = git_commit_author(commit);
+  const git_signature * comitter = git_commit_committer(commit);
+  const git_oid* treeOid = git_commit_tree_id(commit);
+
+  {
+    const time_t commitTime = git_commit_time(commit);
+    const tm* time = std::gmtime(&commitTime);
+    std::strftime(isoDateString, sizeof(isoDateString),
+                  "%Y-%m-%dT%H:%M:%SZ", time);
+
+    auto authorObject = (*object)["author"].object();
+    authorObject["date"] = isoDateString;
+    authorObject["email"] = author->email;
+    authorObject["name"] = author->name;
+  }
+
+  {
+    const time_t commitTime = comitter->when.time;
+    const tm* time = std::gmtime(&commitTime);
+    std::strftime(isoDateString, sizeof(isoDateString),
+                  "%Y-%m-%dT%H:%M:%SZ", time);
+
+    auto authorObject = (*object)["comitter"].object();
+    authorObject["date"] = isoDateString;
+    authorObject["email"] = comitter->email;
+    authorObject["name"] = comitter->name;
+  }
+
+  (*object)["message"] = JsonWriter::escape(git_commit_message(commit));
+
+  {
+    git_oid_tostr(shaString, sizeof(shaString), treeOid);
+
+    auto treeObject = (*object)["tree"].object();
+    treeObject["sha"] = shaString;
+    treeObject["url"] = base_uri() + "/api/repos/" + repositoryName +
+      "/trees/" + shaString;
+  }
+}
+
 void repository_information(const std::vector<std::string>& arguments)
 {
   const std::string& repositoryName = arguments.front();
@@ -561,6 +608,49 @@ void repository_branches(const std::vector<std::string>& arguments)
   }
 }
 
+void repository_branch(const std::vector<std::string>& arguments)
+{
+  // Implements: https://developer.github.com/v3/repos/#get-branch
+  // Excludes specifics for links back to GitHub users, comments etc.
+  const std::string& repositoryName = arguments.front();
+
+  boost::filesystem::path path(repositoriesPath);
+  path /= repositoryName;
+
+  git_repository* repository;
+  int error = git_repository_open(&repository, path.string().c_str());
+
+  if (error != 0) return;
+
+  git_object* object = nullptr;
+  error = git_revparse_single(&object, repository, arguments[1].c_str());
+  if (error)
+  {
+    fprintf(stderr, "The given reference was bad.");
+    return;
+  }
+  else if (git_object_type(object) != GIT_OBJ_COMMIT)
+  {
+    fprintf(stderr, "The given reference is not to a branch.");
+  }
+  else
+  {
+    char shaString[GIT_OID_HEXSZ + 1];
+    git_oid_tostr(shaString, sizeof(shaString), git_object_id(object));
+
+    auto branchObject = JsonWriter::object(&std::cout);
+    branchObject["name"] = arguments[1];
+    {
+      auto commitObject = branchObject["commit"].object();
+      commitObject["sha"] = shaString;
+      const git_commit* const commit = (git_commit*)object;
+      ::commit(commit, repositoryName, &commitObject);
+    }
+  }
+
+  git_object_free(object);
+}
+
 void repository_tag(const std::vector<std::string>& arguments)
 {
   // Implements: https://developer.github.com/v3/git/tags/#get-a-tag
@@ -668,31 +758,8 @@ void repository_commit(const std::vector<std::string>& arguments)
     char isoDateString[sizeof "2011-10-08T07:07:09Z"];
 
     auto object = JsonWriter::object(&std::cout);
-    {
-      const time_t commitTime = git_commit_time(commit);
-      const tm* time = std::gmtime(&commitTime);
-      std::strftime(isoDateString, sizeof(isoDateString),
-        "%Y-%m-%dT%H:%M:%SZ", time);
+    ::commit(commit, repositoryName, &object);
 
-      auto authorObject = object["author"].object();
-      authorObject["date"] = isoDateString;
-      authorObject["email"] = author->email;
-      authorObject["name"] = author->name;
-    }
-
-    {
-      const time_t commitTime = comitter->when.time;
-      const tm* time = std::gmtime(&commitTime);
-      std::strftime(isoDateString, sizeof(isoDateString),
-        "%Y-%m-%dT%H:%M:%SZ", time);
-
-      auto authorObject = object["comitter"].object();
-      authorObject["date"] = isoDateString;
-      authorObject["email"] = comitter->email;
-      authorObject["name"] = comitter->name;
-    }
-
-    object["message"] = JsonWriter::escape(git_commit_message(commit));
     {
       auto parentsArray = object["parents"].array();
       for (unsigned int i = 0, count = git_commit_parentcount(commit);
@@ -709,17 +776,6 @@ void repository_commit(const std::vector<std::string>& arguments)
       }
     }
     object["sha"] = commitHash;
-
-    {
-      char treeHash[41];
-      treeHash[40] = '\0';
-      git_oid_fmt(treeHash, treeOid);
-
-      auto treeObject = object["tree"].object();
-      treeObject["sha"] = treeHash;
-      treeObject["url"] = base_uri() + "/api/repos/" + repositoryName +
-        "/trees/" + treeHash;
-    }
     object["url"] = base_uri() + "/api/repos/" + repositoryName + "/commits/" +
       commitHash;
   }
@@ -929,6 +985,8 @@ int main(int argc, char* argv[])
   router["api"]["repos"][Router::placeholder]["refs"][
     Router::placeholder_remaining] = repository_ref;
   router["api"]["repos"][Router::placeholder]["branches"] = repository_branches;
+  router["api"]["repos"][Router::placeholder]["branches"][Router::placeholder] =
+    repository_branch;
   router["api"]["repos"][Router::placeholder]["tags"] = repository_tags;
   router["api"]["repos"][Router::placeholder]["tags"][Router::placeholder] =
     repository_tag;
