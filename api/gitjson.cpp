@@ -883,6 +883,12 @@ void repository_blob(const std::vector<std::string>& arguments)
 
   git_oid objectId;
   const int error = git_oid_fromstr(&objectId, arguments[1].c_str());
+  if (error)
+  {
+    fprintf(stderr, "The given reference was bad.");
+    return;
+  }
+
   git_blob* blob = nullptr;
   git_blob_lookup(&blob, repository, &objectId);
 
