@@ -86,6 +86,7 @@ class JsonWriterObject
   std::string myIndentation;
 
   JsonWriterObject(const JsonWriterObject&); /* = delete; */
+  JsonWriterObject& operator =(const JsonWriterObject&); /* = default; */
 public:
   JsonWriterObject(std::ostream* output, std::string indentation = "");
   JsonWriterObject(JsonWriterObject&& writer);
@@ -119,6 +120,7 @@ class JsonWriterArray
   JsonWriterArray();
 
   JsonWriterArray(const JsonWriterArray&); /* = delete; */
+  JsonWriterArray& operator =(const JsonWriterArray&); /* = default; */
 public:
 
   JsonWriterArray(std::ostream* output, std::string indentation = "");

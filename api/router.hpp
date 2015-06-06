@@ -115,6 +115,8 @@ public:
   }
 
 private:
+  RouterWithPlaceholder & operator =(const RouterWithPlaceholder&);
+
   Router& myRouter;
 
   bool isPlaceholder;
