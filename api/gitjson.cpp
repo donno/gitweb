@@ -772,7 +772,7 @@ void repository_commit(const std::vector<std::string>& arguments)
         auto parentObject = parentsArray.object();
         parentObject["sha"] = parentShaString;
         parentObject["url"] = base_uri() + "/api/repos/" + repositoryName +
-           "/commits/" + commitHash;;
+           "/commits/" + parentShaString;
       }
     }
     object["sha"] = commitHash;
