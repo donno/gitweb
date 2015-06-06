@@ -822,7 +822,7 @@ void repository_tree(const std::vector<std::string>& arguments)
       auto treeArray = object["tree"].array();
 
       const size_t entryCount = git_tree_entrycount(tree);
-      for (int i = 0; i < entryCount; ++i)
+      for (size_t i = 0; i < entryCount; ++i)
       {
         const git_tree_entry* entry = git_tree_entry_byindex(tree, i);
         git_oid_tostr(shaString, sizeof(shaString), git_tree_entry_id(entry));
