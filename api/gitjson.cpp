@@ -457,9 +457,20 @@ void populate_reference_object(git_reference* reference,
     }
     else
     {
-      object["type"] = "commit";
-      object["url"] = base_uri() + "/api/repos/" + repositoryName +
-        "/commits/" + commitHash;
+      git_reference* resolvedReference = nullptr;
+      if (git_reference_resolve(&resolvedReference, reference) == 0)
+      {
+        object["type"] = "tag";
+        object["url"] = base_uri() + "/api/repos/" + repositoryName +
+          "/tags/" + commitHash;
+        git_reference_free(resolvedReference);
+      }
+      else
+      {
+        object["type"] = "commit";
+        object["url"] = base_uri() + "/api/repos/" + repositoryName +
+          "/commits/" + commitHash;
+      }
     }
   }
   else if (type == GIT_REF_SYMBOLIC)
