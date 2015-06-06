@@ -62,13 +62,13 @@ std::string util::Base64Encode(
   const char padCharacter('=');
 
   // Determine how big the output string will need to be.
-  size_t encodedSize = ((Size / 3) + (Size % 3 > 0)) * 4;
+  git_off_t encodedSize = ((Size / 3) + (Size % 3 > 0)) * 4;
   if (NewLines) encodedSize += encodedSize / 60;
 
   // Implementation taken from the C++ version from:
   // http://en.wikibooks.org/wiki/Algorithm_Implementation/Miscellaneous/Base64
   std::string encodedString;
-  encodedString.reserve(encodedSize);
+  encodedString.reserve(static_cast<std::size_t>(encodedSize));
 
   long temp;
   const char* cursor = static_cast<const char*>(Content);
@@ -941,7 +941,10 @@ void repository_file(const std::vector<std::string>& arguments)
 
   const git_blob* blob = (const git_blob *)object;
 
-  fwrite(git_blob_rawcontent(blob), git_blob_rawsize(blob), 1, stdout);
+  fwrite(git_blob_rawcontent(blob),
+         static_cast<size_t>(git_blob_rawsize(blob)),
+         1,
+         stdout);
 
   git_object_free(object);
 }
