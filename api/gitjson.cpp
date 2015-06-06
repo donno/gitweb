@@ -479,7 +479,6 @@ void repository_refs(const std::vector<std::string>& arguments)
   if (error != 0) return;
 
   {
-    char commitHash[64] = { 0 };
     auto aw = JsonWriter::array(&std::cout);
 
     int ret;
@@ -751,12 +750,7 @@ void repository_commit(const std::vector<std::string>& arguments)
   commitHash[40] = '\0';
   git_oid_fmt(commitHash, oid);
 
-  const git_signature * author = git_commit_author(commit);
-  const git_signature * comitter = git_commit_committer(commit);
-  const git_oid* treeOid = git_commit_tree_id(commit);
   {
-    char isoDateString[sizeof "2011-10-08T07:07:09Z"];
-
     auto object = JsonWriter::object(&std::cout);
     ::commit(commit, repositoryName, &object);
 
@@ -812,7 +806,6 @@ void repository_tree(const std::vector<std::string>& arguments)
 
   {
     char shaString[GIT_OID_HEXSZ + 1];
-    char isoDateString[sizeof "2011-10-08T07:07:09Z"];
 
     auto object = JsonWriter::object(&std::cout);
     object["sha"] = arguments[1];
