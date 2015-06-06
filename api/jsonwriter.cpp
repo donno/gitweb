@@ -128,8 +128,14 @@ JsonWriterObject& JsonWriterObject::operator <<(const char* value)
   return *this;
 }
 
-JsonWriterObject& JsonWriterObject::operator <<(const unsigned int value)
+template<typename T>
+JsonWriterObject& JsonWriterObject::operator <<(T value)
 {
+  static_assert(typename std::is_integral<T>::value,
+                "This function is only intented to be used for integers.");
+  // If value is a string it needs to be quoted and this function is not
+  // suitable for that.
+
   if (isIndenting)
   {
     if (myState == WaitingForAnotherKey)
@@ -199,6 +205,16 @@ JsonWriterObject& JsonWriterObject::operator =(const char* value)
 }
 
 JsonWriterObject& JsonWriterObject::operator =(const unsigned int value)
+{
+  if (myState == WaitingForValue)
+  {
+    *this << value;
+  }
+
+  return *this;
+}
+
+JsonWriterObject& JsonWriterObject::operator =(const std::int64_t value)
 {
   if (myState == WaitingForValue)
   {

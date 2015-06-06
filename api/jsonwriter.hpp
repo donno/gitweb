@@ -59,6 +59,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <cstdint>
 #include <ostream>
 #include <string>
 #include <vector>
@@ -85,6 +86,11 @@ class JsonWriterObject
   bool isIndenting;
   std::string myIndentation;
 
+  // This is a helper function used internally to write an integer to the
+  // output stream (myOutput) based on the state (myState).
+  template<typename T>
+  JsonWriterObject& operator <<(T value);
+
   JsonWriterObject(const JsonWriterObject&); /* = delete; */
   JsonWriterObject& operator =(const JsonWriterObject&); /* = default; */
 public:
@@ -95,13 +101,12 @@ public:
   // This should be called twice (once for the key, and again for the value).
   JsonWriterObject& operator <<(const char* value);
 
-  JsonWriterObject& operator <<(const unsigned int value);
-
   JsonWriterObject& operator [](const char* key);
 
   JsonWriterObject& operator =(const std::string& value);
   JsonWriterObject& operator =(const char* value);
   JsonWriterObject& operator =(const unsigned int value);
+  JsonWriterObject& operator =(const std::int64_t value);
   JsonWriterObject& operator =(const JsonWriterArray& value);
 
   // These should really only be on the class returned by operator [].
