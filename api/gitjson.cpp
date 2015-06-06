@@ -307,14 +307,21 @@ void branches(git_repository* repository,
               JsonWriterArray* array)
 {
   char shaString[GIT_OID_HEXSZ + 1];
-  int ret;
   git_branch_iterator* iterator = nullptr;
   git_reference* reference = nullptr;
   git_branch_t type;
   git_branch_iterator_new(&iterator, repository, GIT_BRANCH_LOCAL);
-  while ((ret = git_branch_next(&reference, &type, iterator) != GIT_ITEROVER)
-         && ret != 0)
+
+  for (int ret = git_branch_next(&reference, &type, iterator);
+       ret != GIT_ITEROVER;
+       ret = git_branch_next(&reference, &type, iterator))
   {
+    if (ret != 0)
+    {
+      // an error occured.
+      std::exit(1);
+    }
+
     const char* name = nullptr;
     git_branch_name(&name, reference);
     git_oid_tostr(shaString, sizeof(shaString),
@@ -481,13 +488,20 @@ void repository_refs(const std::vector<std::string>& arguments)
   {
     auto aw = JsonWriter::array(&std::cout);
 
-    int ret;
     git_reference* reference = nullptr;
     git_reference_iterator* iterator = nullptr;
     git_reference_iterator_new(&iterator, repository);
-    while ((ret = git_reference_next(&reference, iterator) != GIT_ITEROVER) &&
-      ret != 0)
+
+    for (int ret = git_reference_next(&reference, iterator);
+         ret != GIT_ITEROVER;
+         ret = git_reference_next(&reference, iterator))
     {
+      if (ret != 0)
+      {
+        // an error occured.
+        std::exit(1);
+      }
+
       auto tagObject = aw.object();
       tagObject["ref"] = git_reference_name(reference);
       tagObject["url"] = base_uri() + "/api/repos/" + repositoryName + '/' +
