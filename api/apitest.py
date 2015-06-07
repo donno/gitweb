@@ -189,6 +189,44 @@ class ApiTester(unittest.TestCase):
     self.assertIn('type', ref['object'])
     self.assertIn('sha', ref['object'])
 
+  def test_reference_which_is_a_tag(self):
+    """Tests getting a single reference that is a tag in a repository."""
+    r = requests.get(self.baseUri + '/refs/tags/gitgui-0.14.0')
+    self.assertEqual(r.status_code, 200)
+    self.assertEqual(r.headers['content-type'], self.jsonContentType)
+    self.assertEqual(r.encoding, 'utf-8')
+
+    ref = r.json()
+
+    # This follows the GitHub API, so is just a list and doesn't contain the
+    # name of the repository it is for.
+    # See https://developer.github.com/v3/git/refs/#get-a-reference
+    self.assertIsInstance(ref, dict)
+
+    # A Tag should have a URI to the tag, the hash of the tag and the name.
+    self.assertIn('ref', ref)
+    self.assertEqual(ref['ref'], 'refs/tags/gitgui-0.14.0')
+    self.assertIn('url', ref)
+
+    # This does not use equality because the address returned can be different
+    # to the address requested (i.e localhost v.s computer for example).
+    self.assertTrue(ref['url'].endswith('/git/refs/tags/gitgui-0.14.0'))
+    self.assertIn('object', ref)
+
+    # The object should have at least these three properties.
+    self.assertIn('url', ref['object'])
+    self.assertIn('type', ref['object'])
+    self.assertIn('sha', ref['object'])
+
+    self.assertFalse(ref['object']['url'].endswith(
+        '/commits/4c36ee7b0587083f82a6359a3b14cf6c73c65d34'))
+
+    # Make sure the URL in the object is valid.
+    r = requests.get(ref['object']['url'])
+    self.assertEqual(r.status_code, 200)
+    self.assertEqual(r.headers['content-type'], self.jsonContentType)
+    self.assertEqual(r.encoding, 'utf-8')
+
 
 class ServiceWalker(unittest.TestCase):
   """
