@@ -227,6 +227,61 @@ class ApiTester(unittest.TestCase):
     self.assertEqual(r.headers['content-type'], self.jsonContentType)
     self.assertEqual(r.encoding, 'utf-8')
 
+  def test_commit(self):
+    """Tests getting a single commit in a repository."""
+    r = requests.get(self.baseUri +
+                     '/commits/fbc9629e2f0cd31ab08638ebbd8f98a323329a5b')
+    self.assertEqual(r.status_code, 200)
+    self.assertEqual(r.headers['content-type'], self.jsonContentType)
+    self.assertEqual(r.encoding, 'utf-8')
+
+    commit = r.json()
+
+    # Expected values can be compared with:
+    #   git cat-file fbc9629e2f0cd31ab08638ebbd8f98a323329a5b -p
+
+    # The object should have at least these three properties.
+    self.assertIn('url', commit)
+    self.assertIn('sha', commit)
+
+    self.assertTrue(commit['url'].endswith(
+                      '/commits/fbc9629e2f0cd31ab08638ebbd8f98a323329a5b'))
+
+    # Check the author
+    self.assertIn('author', commit)
+    self.assertEqual(commit['author']['name'], 'Pat Thoyts')
+    self.assertEqual(commit['author']['email'],
+                     'patthoyts@users.sourceforge.net')
+    self.assertEqual(commit['author']['date'], '2011-03-25T08:26:47Z')
+
+    # Check the comitter
+    self.assertIn('comitter', commit)
+    self.assertEqual(commit['comitter']['name'], 'Pat Thoyts')
+    self.assertEqual(commit['comitter']['email'],
+                     'patthoyts@users.sourceforge.net')
+    self.assertEqual(commit['comitter']['date'], '2011-03-25T08:26:47Z')
+
+    # Check the tree
+    self.assertIn('tree', commit)
+
+    # Check the message
+    self.assertIn('message', commit)
+
+    # Check the parents (there are two as this is a merge).
+    self.assertIn('parents', commit)
+    self.assertEqual(len(commit['parents']), 2)
+
+    firstParent, secondParent = commit['parents']
+
+    self.assertEqual(firstParent['sha'],
+                     '35b6f72feb998add040d95a9c89ff7ecd4d74901')
+    self.assertTrue(firstParent['url'].endswith(
+                      '/commits/35b6f72feb998add040d95a9c89ff7ecd4d74901'))
+    self.assertEqual(secondParent['sha'],
+                     'f3768a6714e667205d68475df37a889abb59d2d5')
+    self.assertTrue(secondParent['url'].endswith(
+                      '/commits/f3768a6714e667205d68475df37a889abb59d2d5'))
+
 
 class ServiceWalker(unittest.TestCase):
   """
