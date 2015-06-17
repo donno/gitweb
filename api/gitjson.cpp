@@ -900,7 +900,14 @@ int main(int argc, char* argv[])
     return 1;
   }
 
+#if LIBGIT2_VER_MINOR < 22 && LIBGIT2_VER_MAJOR == 0
   git_threads_init();
+  const auto git_shutdown = git_threads_shutdown;
+#else
+  git_libgit2_init();
+  const auto git_shutdown = git_libgit2_shutdown;
+#endif
+
   Router router;
   router["api"] = api_information;
   router["api"]["repos"] = repositories_list;
@@ -940,7 +947,7 @@ int main(int argc, char* argv[])
       if (!router(uriFromStandardIn.c_str(), '/'))
       {
         fprintf(stderr, "Unknown resource: %s\n", uri.c_str());
-        git_threads_shutdown();
+        git_shutdown();
         return 1;
       }
       std::cout << "\04\n";
@@ -952,12 +959,12 @@ int main(int argc, char* argv[])
     if (!router(argv[1], '/'))
     {
       fprintf(stderr, "Unknown resource: %s\n", uri.c_str());
-      git_threads_shutdown();
+      git_shutdown();
       return 1;
     }
   }
 
-  git_threads_shutdown();
+  git_shutdown();
   return 0;
 }
 
