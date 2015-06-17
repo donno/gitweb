@@ -18,22 +18,6 @@
 #include <algorithm>
 #include <iterator>
 
-#ifdef GITJSON_USE_BOOST_FILESYSTEM
-#include "boost/filesystem.hpp"
-#include "boost/filesystem/path.hpp"
-#else
-#include <filesystem>
-
-namespace boost
-{
-  namespace filesystem
-  {
-    using namespace std::tr2::sys;
-  }
-}
-
-#endif
-
 #include "libgit2/include/git2.h"
 
 // TODO:
@@ -44,14 +28,13 @@ namespace boost
 static const char* repositoriesPath = "W:/source";
 namespace util
 {
-
   const static char Base64Lookup[] =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
   // Base64 encode the data from Content to Content + Size and insert new lines
   // every 60 characters.
-  std::string Base64Encode(const void * Content, git_off_t Size, bool NewLines)
-;
+  std::string
+  Base64Encode(const void * Content, git_off_t Size, bool NewLines);
 }
 
 std::string util::Base64Encode(
@@ -113,14 +96,10 @@ std::string util::Base64Encode(
 
 namespace git
 {
-  // Returns the paths of the repositories at the given Path.
-  std::vector<boost::filesystem::path> repositories(
-    const boost::filesystem::path& Path);
-
   // Class for helping set-up the repository
   class Repository
   {
-    boost::filesystem::path myPath;
+    std::string myPath;
     git_repository* myRepository;
 
   public:
@@ -169,66 +148,12 @@ git_object* git::Repository::Parse(const std::string& specification)
   return object;
 }
 
-std::vector<boost::filesystem::path> git::repositories(
-  const boost::filesystem::path& Path)
-{
-  std::vector<boost::filesystem::path> repositories;
-
-  if (!boost::filesystem::is_directory(Path))
-  {
-    fprintf(stderr, "Could not find repositories as %s is not a directory.",
-            Path.string().c_str());
-    return repositories;
-  }
-
-  for (auto folder = boost::filesystem::directory_iterator(Path);
-       folder != boost::filesystem::directory_iterator();
-       ++folder)
-  {
-    if (!boost::filesystem::is_directory(folder->status())) continue;
-
-    git_repository* repo;
-    int error = git_repository_open(&repo, folder->path().string().c_str());
-    git_repository_free(repo);
-
-    if (error == GIT_ENOTFOUND)
-    {
-      continue; // This path is not a git repository.
-    }
-    else if (error != 0)
-    {
-      fprintf(stderr, "Failed to open git repository (%s): error code: %d\n",
-              folder->path().string().c_str(), error);
-      continue;
-    }
-
-    repositories.push_back(folder->path());
-  }
-
-  return repositories;
-}
 
 git::Repository::Repository(const std::string& name)
-: myPath(boost::filesystem::path(repositoriesPath)),
+: myPath(repositoriesPath + ("/" + name)),
   myRepository(nullptr)
 {
-  myPath /= name;
-
-  const boost::filesystem::path path(repositoriesPath);
-  if (!boost::filesystem::is_directory(path))
-  {
-    fprintf(stderr, "Could not find repository as \"%s\" is not a directory.\n",
-            repositoriesPath);
-    return;
-  }
-  else if (!boost::filesystem::is_directory(myPath))
-  {
-    fprintf(stderr, "Could not find repository from '%s'\n",
-            myPath.string().c_str());
-    return;
-  }
-
-  int error = git_repository_open(&myRepository, myPath.string().c_str());
+  int error = git_repository_open(&myRepository, myPath.c_str());
   if (error != 0)
   {
     const git_error* lastError = giterr_last();
@@ -280,26 +205,7 @@ static void api_information()
 
 static void repositories_list()
 {
-  const boost::filesystem::path path(repositoriesPath);
-  if (!boost::filesystem::is_directory(path))
-  {
-    fprintf(stderr, "Could not find repositories as %s is not a directory.",
-            repositoriesPath);
-    return;
-  }
-
-  {
-    std::vector<boost::filesystem::path> repos = git::repositories(path);
-    auto aw = JsonWriter::array(&std::cout);
-    for (auto repo = std::begin(repos); repo != std::end(repos); ++repo)
-    {
-#ifdef GITJSON_USE_BOOST_FILESYSTEM
-      aw << repo->stem().string();
-#else
-      aw << repo->stem();
-#endif
-    }
-  }
+  // TODO:
 }
 
 void branches(git_repository* repository,
@@ -390,11 +296,10 @@ void repository_information(const std::vector<std::string>& arguments)
 {
   const std::string& repositoryName = arguments.front();
 
-  boost::filesystem::path path(repositoriesPath);
-  path /= repositoryName;
+  const auto path = repositoriesPath + ("/" + repositoryName);
 
   git_repository* repo;
-  int error = git_repository_open(&repo, path.string().c_str());
+  int error = git_repository_open(&repo, path.c_str());
 
   if (error != 0) return;
 
@@ -487,12 +392,10 @@ void repository_refs(const std::vector<std::string>& arguments)
   //
   // Example: https://api.github.com/repos/git/git/git/refs
   const std::string& repositoryName = arguments.front();
-
-  boost::filesystem::path path(repositoriesPath);
-  path /= repositoryName;
+  const auto path = repositoriesPath + ("/" + repositoryName);
 
   git_repository* repository;
-  int error = git_repository_open(&repository, path.string().c_str());
+  int error = git_repository_open(&repository, path.c_str());
 
   if (error != 0) return;
 
@@ -536,8 +439,7 @@ void repository_ref(const std::vector<std::string>& arguments)
 
   const std::string& repositoryName = arguments.front();
 
-  boost::filesystem::path path(repositoriesPath);
-  path /= repositoryName;
+  const auto path = repositoriesPath + ("/" + repositoryName);
 
   // The long name for the reference (e.g. HEAD, refs/heads/master, refs/tags/v0.1.0)
   std::stringstream referenceName;
@@ -547,7 +449,7 @@ void repository_ref(const std::vector<std::string>& arguments)
   referenceName << arguments.back();
 
   git_repository* repo = nullptr;
-  int error = git_repository_open(&repo, path.string().c_str());
+  int error = git_repository_open(&repo, path.c_str());
   if (error != 0) return;
 
   git_reference* reference = nullptr;
@@ -580,12 +482,10 @@ void repository_ref(const std::vector<std::string>& arguments)
 void repository_tags(const std::vector<std::string>& arguments)
 {
   const std::string& repositoryName = arguments.front();
-
-  boost::filesystem::path path(repositoriesPath);
-  path /= repositoryName;
+  const auto path = repositoriesPath + ("/" + repositoryName);
 
   git_repository* repo;
-  int error = git_repository_open(&repo, path.string().c_str());
+  int error = git_repository_open(&repo, path.c_str());
 
   if (error != 0) return;
 
@@ -618,11 +518,10 @@ void repository_branches(const std::vector<std::string>& arguments)
   // Implements: https://developer.github.com/v3/repos/#list-branches
   const std::string& repositoryName = arguments.front();
 
-  boost::filesystem::path path(repositoriesPath);
-  path /= repositoryName;
+  const auto path = repositoriesPath + ("/" + repositoryName);
 
   git_repository* repository;
-  int error = git_repository_open(&repository, path.string().c_str());
+  int error = git_repository_open(&repository, path.c_str());
 
   if (error != 0) return;
 
@@ -637,12 +536,10 @@ void repository_branch(const std::vector<std::string>& arguments)
   // Implements: https://developer.github.com/v3/repos/#get-branch
   // Excludes specifics for links back to GitHub users, comments etc.
   const std::string& repositoryName = arguments.front();
-
-  boost::filesystem::path path(repositoriesPath);
-  path /= repositoryName;
+  const auto path = repositoriesPath + ("/" + repositoryName);
 
   git_repository* repository;
-  int error = git_repository_open(&repository, path.string().c_str());
+  int error = git_repository_open(&repository, path.c_str());
 
   if (error != 0) return;
 
