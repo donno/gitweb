@@ -131,7 +131,7 @@ JsonWriterObject& JsonWriterObject::operator <<(const char* value)
 template<typename T>
 JsonWriterObject& JsonWriterObject::operator <<(T value)
 {
-  static_assert(typename std::is_integral<T>::value,
+  static_assert(std::is_integral<T>::value,
                 "This function is only intented to be used for integers.");
   // If value is a string it needs to be quoted and this function is not
   // suitable for that.
