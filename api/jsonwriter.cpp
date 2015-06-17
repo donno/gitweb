@@ -224,12 +224,12 @@ JsonWriterObject& JsonWriterObject::operator =(const std::int64_t value)
   return *this;
 }
 
-JsonWriterObject& JsonWriterObject::operator =(const JsonWriterArray& value)
+JsonWriterObject& JsonWriterObject::operator =(const JsonWriterArray&)
 {
   if (myState == WaitingForAnotherKey)
   {
     if (isIndenting) myOutput << ',' << std::endl;
-    else myOutput << ',' ;
+    else myOutput << ',';
   }
 
   return *this;
