@@ -217,13 +217,7 @@ void commit(
 void repository_information(const std::vector<std::string>& arguments)
 {
   const std::string& repositoryName = arguments.front();
-
-  const auto path = repositoriesPath + ("/" + repositoryName);
-
-  git_repository* repo;
-  int error = git_repository_open(&repo, path.c_str());
-
-  if (error != 0) return;
+  git::Repository repo(repositoryName);
 
   std::vector<std::pair<std::string, git_oid>> tags;
   git_tag_foreach(repo, for_tags, &tags);
@@ -251,8 +245,6 @@ void repository_information(const std::vector<std::string>& arguments)
       }
     }
   }
-
-  git_repository_free(repo);
 }
 
 // Populate the object property of a reference.
