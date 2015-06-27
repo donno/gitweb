@@ -4,8 +4,11 @@
 // COPYRIGHT    : (c) 2013 Sean Donnellan. All Rights Reserved.
 // LICENSE      : The MIT License (see LICENSE.txt for details)
 //
+// Exposes a API that returns JSON objects over a single git repoistory
+//
 //===----------------------------------------------------------------------===//
 
+#include "repository.hpp"
 #include "router.hpp"
 #include "jsonwriter.hpp"
 
@@ -92,87 +95,6 @@ std::string util::Base64Encode(
   }
 
   return encodedString;
-}
-
-namespace git
-{
-  // Class for helping set-up the repository
-  class Repository
-  {
-    std::string myPath;
-    git_repository* myRepository;
-
-  public:
-    //  Opens the repository with the given name in repositoriesPath..
-    Repository(const std::string& name);
-
-    // Convenience operator to allow instances of this class to be passed
-    // directly to the libgit2 functions.
-    operator git_repository*() const { return myRepository; }
-
-    // Determines if the repository is opened.
-    bool IsOpen() const { return myRepository != nullptr; }
-
-    // Finds an object with the given "specification" which may be the hex-hash
-    // or a named reference (tag).
-    //
-    // The caller is responsnible for freeing the object, and should do so
-    // before the Repository destructs.
-    //
-    // Returns null if it can't open the object.
-    git_object* Parse(const std::string& specification);
-
-    // Closes the repository. Everything opened from the repository should be
-    // closed (freed) before this occurs.
-    ~Repository();
-  };
-}
-
-git_object* git::Repository::Parse(const std::string& specification)
-{
-  git_object* object = nullptr;
-  int error = git_revparse_single(&object, myRepository, specification.c_str());
-  if (error != 0)
-  {
-    const git_error* lastError = giterr_last();
-    if (lastError && lastError->message)
-    {
-      fprintf(stderr, "%s\n", lastError->message);
-    }
-    else
-    {
-      fprintf(stderr, "Could not resolve '%s'\n", specification.c_str());
-    }
-    return nullptr;
-  }
-  return object;
-}
-
-
-git::Repository::Repository(const std::string& name)
-: myPath(repositoriesPath + ("/" + name)),
-  myRepository(nullptr)
-{
-  int error = git_repository_open(&myRepository, myPath.c_str());
-  if (error != 0)
-  {
-    const git_error* lastError = giterr_last();
-    if (lastError && lastError->message)
-    {
-      fprintf(stderr, "%s\n", lastError->message);
-    }
-    else
-    {
-      fprintf(stderr, "Could not open repository: cause unknown.\n");
-    }
-    return;
-  }
-}
-
-git::Repository::~Repository()
-{
-  git_repository_free(myRepository);
-  myRepository = nullptr;
 }
 
 static int for_tags(
