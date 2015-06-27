@@ -21,7 +21,13 @@
 #include <algorithm>
 #include <iterator>
 
+#ifdef _MSC_VER
+#pragma warning(disable : 4510 4512 4610)
+#endif
 #include "libgit2/include/git2.h"
+#ifdef _MSC_VER
+#pragma warning(4 : 4510 4512 4610)
+#endif
 
 // TODO:
 // - Support configuring where the repositories are kept.
@@ -814,13 +820,7 @@ int main(int argc, char* argv[])
     return 1;
   }
 
-#if LIBGIT2_VER_MINOR < 22 && LIBGIT2_VER_MAJOR == 0
-  git_threads_init();
-  const auto git_shutdown = git_threads_shutdown;
-#else
   git_libgit2_init();
-  const auto git_shutdown = git_libgit2_shutdown;
-#endif
 
   Router router;
   router["api"] = api_information;
@@ -861,7 +861,10 @@ int main(int argc, char* argv[])
       if (!router(uriFromStandardIn.c_str(), '/'))
       {
         fprintf(stderr, "Unknown resource: %s\n", uri.c_str());
-        git_shutdown();
+        if (git_libgit2_shutdown() != 0)
+        {
+          fprintf(stderr, "Failed to shutdown git.\n");
+        }
         return 1;
       }
       std::cout << "\04\n";
@@ -873,12 +876,18 @@ int main(int argc, char* argv[])
     if (!router(argv[1], '/'))
     {
       fprintf(stderr, "Unknown resource: %s\n", uri.c_str());
-      git_shutdown();
+      if (git_libgit2_shutdown() != 0)
+      {
+        fprintf(stderr, "Failed to shutdown git.\n");
+      }
       return 1;
     }
   }
 
-  git_shutdown();
+  if (git_libgit2_shutdown() != 0)
+  {
+    fprintf(stderr, "Failed to shutdown git.\n");
+  }
   return 0;
 }
 

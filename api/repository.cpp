@@ -8,7 +8,13 @@
 
 #include "repository.hpp"
 
+#ifdef _MSC_VER
+#pragma warning(disable : 4510 4512 4610)
+#endif
 #include "libgit2/include/git2.h"
+#ifdef _MSC_VER
+#pragma warning(4 : 4510 4512 4610)
+#endif
 
 static const char* repositoriesPath = "D:/vcs";
 
