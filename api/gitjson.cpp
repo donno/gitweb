@@ -133,7 +133,8 @@ static void api_information()
 
 static void repositories_list()
 {
-  // TODO:
+   JsonWriter::array(&std::cout);
+   // TODO: Decide what to do here.
 }
 
 void branches(git_repository* repository,
