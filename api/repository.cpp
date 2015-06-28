@@ -22,19 +22,19 @@ git::Repository::Repository(const std::string& name)
 : myPath(repositoriesPath + ("/" + name)),
   myRepository(nullptr)
 {
-  int error = git_repository_open(&myRepository, myPath.c_str());
+  const int error = git_repository_open(&myRepository, myPath.c_str());
   if (error != 0)
   {
     const git_error* lastError = giterr_last();
     if (lastError && lastError->message)
     {
-      fprintf(stderr, "%s\n", lastError->message);
+      throw git::Error(std::string("Could not open repository: ") +
+                       lastError->message);
     }
     else
     {
-      fprintf(stderr, "Could not open repository: cause unknown.\n");
+      throw git::Error("Could not open repository: cause unknown.");
     }
-    return;
   }
 }
 

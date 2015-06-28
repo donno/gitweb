@@ -9,6 +9,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <stdexcept>
 #include <string>
 
 struct git_repository;
@@ -16,6 +17,12 @@ struct git_object;
 
 namespace git
 {
+  class Error : public std::runtime_error
+  {
+  public:
+    Error(const std::string& message) : std::runtime_error(message) {}
+  };
+
   class Repository
   {
     std::string myPath;
@@ -24,6 +31,7 @@ namespace git
   public:
     //  Opens the repository with the given name in repositoriesPath..
     Repository(const std::string& name);
+    // Throws git::Error if the repository can not be found.
 
     // Closes the repository. Everything opened from the repository should be
     // closed (freed) before this occurs.
@@ -39,7 +47,7 @@ namespace git
     // Finds an object with the given "specification" which may be the hex-hash
     // or a named reference (tag).
     //
-    // The caller is responsnible for freeing the object, and should do so
+    // The caller is responsible for freeing the object, and should do so
     // before the Repository destructs.
     //
     // Returns null if it can't open the object.

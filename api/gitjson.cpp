@@ -34,7 +34,8 @@
 
 #define VERSION "0.1.0"
 
-static const char* repositoriesPath = "W:/source";
+static const char* repositoriesPath = "D:/vcs";
+
 namespace util
 {
   const static char Base64Lookup[] =
@@ -851,6 +852,17 @@ int main(int argc, char* argv[])
   // A work in progress.
   router["api"]["repos"][Router::placeholder]["next"] = repository_next_command;
 
+  struct ShutdownGit
+  {
+    ~ShutdownGit()
+    {
+      if (git_libgit2_shutdown() != 0)
+      {
+        fprintf(stderr, "Failed to shutdown git.\n");
+      }
+    }
+  } shutdownOnScopeExit;
+
   if (uri == "-")
   {
     // Read the URI from standard in.
@@ -859,13 +871,10 @@ int main(int argc, char* argv[])
            uriFromStandardIn != "\4")
     {
       // Perform the route.
+      // TODO: Add exception handling.
       if (!router(uriFromStandardIn.c_str(), '/'))
       {
         fprintf(stderr, "Unknown resource: %s\n", uri.c_str());
-        if (git_libgit2_shutdown() != 0)
-        {
-          fprintf(stderr, "Failed to shutdown git.\n");
-        }
         return 1;
       }
       std::cout << "\04\n";
@@ -874,21 +883,21 @@ int main(int argc, char* argv[])
   else
   {
     // Perform the route.
-    if (!router(argv[1], '/'))
+    try
     {
-      fprintf(stderr, "Unknown resource: %s\n", uri.c_str());
-      if (git_libgit2_shutdown() != 0)
+      if (!router(argv[1], '/'))
       {
-        fprintf(stderr, "Failed to shutdown git.\n");
+        fprintf(stderr, "Unknown resource: %s\n", uri.c_str());
+        return 1;
       }
-      return 1;
+    }
+    catch (const git::Error& error)
+    {
+      fprintf(stderr, "Error: %s\n", error.what());
+      return 2;
     }
   }
 
-  if (git_libgit2_shutdown() != 0)
-  {
-    fprintf(stderr, "Failed to shutdown git.\n");
-  }
   return 0;
 }
 
