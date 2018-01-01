@@ -77,7 +77,7 @@ class GitRunner(Forwarder):
   set-up gitjson each time a request is made.
   """
 
-  gitjsonexe = r'build\Debug\bin\gitjson.exe'
+  gitjsonexe = r'build\Release_x64\gitjson.exe'
 
   gitjsonprocess = None
 
@@ -136,7 +136,7 @@ class GitForwarder(Forwarder):
   the given URI on the command line and reads its output and forwards it onto
   the requester.
   """
-  gitjsonexe = r'build\Debug\bin\gitjson.exe'
+  gitjsonexe = r'build\Release_x64\gitjson.exe'
 
   def execute(self, path):
     """Executes the git json executable and returns the results."""
