@@ -1,0 +1,5 @@
+# Ignore the build folder created by MSBuild.
+build/
+
+# Ignore object files output by GCC/Clang (via make).
+*.o
