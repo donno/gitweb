@@ -21,7 +21,7 @@ Provides data (commits and files) from Git repositories as JSON inspired by the 
 | /api/repos/{repo-name}/tags/{name} | Information about that tag. |
 | /api/repos/{repo-name}/commit/{hash} | Information for that hash.|
 
-##TODO:
+## TODO:
 * Host a HTTP server in C++ (via Boost.Beast)
 * Learn and document how to hook up this server to NGINX.
 * ~~Generate a HTML pages for each commit (logs etc)~~ Leave this to web client.
