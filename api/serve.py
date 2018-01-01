@@ -67,7 +67,7 @@ class Forwarder(SimpleHTTPRequestHandler):
       for element in response:
         self.wfile.write(element)
     else:
-      self.wfile.write(response)
+      self.wfile.write(response.encode('utf-8'))
 
 class GitRunner(Forwarder):
   """
