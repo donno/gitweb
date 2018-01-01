@@ -1,27 +1,37 @@
+# gitweb - API
 
-License:
+Provides data (commits and files) from Git repositories as JSON inspired by the GitHub V3 APIs.
+
+## Dependencies:
+* libgit2
+
+## License:
   Under the MIT license, see LICENSE.txt for details.
 
-Features:
+## Features:
+ * Provides data from Git repositories as JSON mostly following the GitHub V3 APIs.
+ * Host a HTTP server (via Python)
 
-* Host a HTTP server
-* Generate a html pages for each commit (logs etc).
-* (Optionally) generate "JSON" or some interface so a purely "single page" could
-   be made
+## JSON interface:
+| URI           | Description   |
+| ------------- |:-------------:|
+| /api/repos/{repo-name} | Summary of that repo. |
+| /api/repos/{repo-name}/branches | List the branches in that repo |
+| /api/repos/{repo-name}/tags | List the tags in that repo |
+| /api/repos/{repo-name}/tags/{name} | Information about that tag. |
+| /api/repos/{repo-name}/commit/{hash} | Information for that hash.|
 
-Pages:
+##TODO:
+* Host a HTTP server in C++ (via Boost.Beast)
+* Learn and document how to hook up this server to NGINX.
+* ~~Generate a HTML pages for each commit (logs etc)~~ Leave this to web client.
 
-  / - Main screen
-  /<repo-name> - Home screen for a given repo
-  /<repo-name>/branches - List the branches in that repo
-  /<repo-name>/tags - List the tags in that repo
-  /<repo-name/commit/<hash> - Information for that hash.
-
-  /<repo-name> - Home screen for a given repo
-
-JSON interface:
-  /api/repos/<repo-name> - Summary of that repo.
-  /api/repos/<repo-name>/branches - List the branches in that repo
-  /api/repos/<repo-name>/tags - List the tags in that repo
-  /api/repos/<repo-name>/tags/<name> - Information about that tag.
-  /api/repos/<repo-name/commit/<hash> - Information for that hash.
+##HTML pages:
+The following is currently outside of the scope.
+| URI           | Description   |
+| ------------- |:-------------:|
+| /             | Main screen   |
+| /{repo-name}  | Home screen for a given repo |
+| /{repo-name}/branches | List the branches in that repo  |
+| /{repo-name}/tags     | List the tags in that repo      |
+| /{repo-name}/commit/{hash} | Information for that hash. |
