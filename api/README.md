@@ -5,6 +5,23 @@ Provides data (commits and files) from Git repositories as JSON inspired by the 
 ## Dependencies:
 * libgit2
 
+## Building
+
+### On Alpine Linux
+
+Install the packages:
+* apk add make g++ libgit2-dev
+
+Build it
+* make
+
+Run it
+* ./gitjson /api/
+* ./gitjson /api/repos/gitweb
+
+NOTE: The base path for where to find repos was hard coded for windows and
+will need to be changed. This is not by-design.
+
 ## License:
   Under the MIT license, see LICENSE.txt for details.
 
