@@ -8,12 +8,19 @@
 #                to respond to the queries.
 #
 #===------------------------------------------------------------------------===#
+from __future__ import print_function
+
 import os
 import subprocess
 import sys
 import tempfile
-import BaseHTTPServer
-from SimpleHTTPServer import SimpleHTTPRequestHandler
+try:
+  from BaseHTTPServer import HTTPServer
+  from SimpleHTTPServer import SimpleHTTPRequestHandler
+except ModuleNotFoundError:
+  from http.server import BaseHTTPRequestHandler as SimpleHTTPRequestHandler
+  from http.server import HTTPServer
+
 
 class Forwarder(SimpleHTTPRequestHandler):
   """Forward the information on to another process."""
@@ -117,8 +124,8 @@ class GitRunner(Forwarder):
           stderr=stderr,
           )
 
-      except EnvironmentError, e:
-        print 'error: invoking process: ', e
+      except EnvironmentError as e:
+        print('error: invoking process: ', e)
         return None
 
     return GitRunner.gitjsonprocess
@@ -151,9 +158,9 @@ class GitForwarder(Forwarder):
         stdout=stdout,
         stderr=stderr,
         )
-    except EnvironmentError, e:
-      print 'error: invoking process: ', e
-      return None
+    except EnvironmentError as e:
+      print('error: invoking process: ', e)
+      return None, None
     p.stdin.close()
 
     exitCode = p.wait()
@@ -176,12 +183,12 @@ if __name__ == '__main__':
   # are cleared.
   reuseProcess = False
   if reuseProcess:
-    httpd = BaseHTTPServer.HTTPServer(server_address, GitRunner)
+    httpd = HTTPServer(server_address, GitRunner)
   else:
-    httpd = BaseHTTPServer.HTTPServer(server_address, GitForwarder)
+    httpd = HTTPServer(server_address, GitForwarder)
 
   sa = httpd.socket.getsockname()
-  print "Serving HTTP on", sa[0], "port", sa[1], "..."
+  print("Serving HTTP on", sa[0], "port", sa[1], "...")
   httpd.serve_forever()
 
 #===---------------------------- End of the file ---------------------------===#
