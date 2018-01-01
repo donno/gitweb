@@ -10,7 +10,7 @@
 
 #ifdef _MSC_VER
 #pragma warning(disable : 4510 4512 4610)
-#include "libgit2/include/git2.h"
+#include <git2.h>
 #pragma warning(4 : 4510 4512 4610)
 #else
 #include <git2.h>

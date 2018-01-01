@@ -22,6 +22,19 @@ Run it
 NOTE: The base path for where to find repos was hard coded for windows and
 will need to be changed. This is not by-design.
 
+### On Microsoft Windows
+
+Install the prerequisites
+* Microsoft Visual C++ 2017
+* libgit2 (not yet available through vcpkg) but once done: vcpkg install libgit2
+
+Building
+* msbuild /p:Configuration=Release
+
+Run it
+* x64\Release\gitjson.exe /api/
+* x64\Release\gitjson.exe /api/repos/gitweb
+
 ## License:
   Under the MIT license, see LICENSE.txt for details.
 

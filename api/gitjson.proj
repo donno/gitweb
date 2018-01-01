@@ -28,26 +28,24 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Targets" />
 
+  <!-- This expects that libgit2 is avaliable via vcpkg.
+
+    See https://github.com/Microsoft/vcpkg/pull/2433
+  -->
   <ItemDefinitionGroup>
     <ClCompile>
       <WarningLevel>Level4</WarningLevel>
-      <AdditionalIncludeDirectories>..\thirdparty</AdditionalIncludeDirectories>
       <AdditionalOptions>/permissive- %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
-    <Link>
-      <AdditionalDependencies>git2.lib;%(AdditionalDependencies)</AdditionalDependencies>
-    </Link>
   </ItemDefinitionGroup>
 
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <Link>
-      <AdditionalLibraryDirectories>..\thirdparty\libgit2\lib\msvc_x86_release</AdditionalLibraryDirectories>
-    </Link>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <Link>
-      <AdditionalLibraryDirectories>..\thirdparty\libgit2\lib\msvc_x64_release</AdditionalLibraryDirectories>
-    </Link>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <SDLCheck>true</SDLCheck>
+      <EnablePREfast>true</EnablePREfast>
+    </ClCompile>
   </ItemDefinitionGroup>
 
   <ItemGroup>
