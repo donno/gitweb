@@ -8,6 +8,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef _CRT_SECURE_NO_WARNINGS
+// Prevent warnings about gmtime and getenv.
+#define _CRT_SECURE_NO_WARNINGS
+#endif
+
 #include "repository.hpp"
 #include "router.hpp"
 #include "jsonwriter.hpp"
