@@ -71,7 +71,7 @@ std::string util::Base64Encode(
   long temp;
   const char* cursor = static_cast<const char*>(Content);
 
-  for (size_t idx = 0, rowCount = 4; idx < Size / 3; ++idx, rowCount += 4)
+  for (git_off_t idx = 0, rowCount = 4; idx < Size / 3; ++idx, rowCount += 4)
   {
     temp  = (*cursor++) << 16; //Convert to big endian
     temp += (*cursor++) << 8;
@@ -578,11 +578,11 @@ void repository_commit(const std::vector<std::string>& arguments)
 
   const std::string& specification = arguments[1];
 
-  git_object* object = repository.Parse(specification);
-  if (!object) return;
+  git_object* gitObject = repository.Parse(specification);
+  if (!gitObject) return;
 
   // TODO: Handle indirection through an annoated tag.
-  switch (git_object_type(object))
+  switch (git_object_type(gitObject))
   {
   default:
     fprintf(stderr, "'%s' does not reference a commit.\n",
@@ -592,8 +592,8 @@ void repository_commit(const std::vector<std::string>& arguments)
     break;
   }
 
-  const git_oid* oid = git_object_id(object);
-  const git_commit* commit = (const git_commit*)object;
+  const git_oid* oid = git_object_id(gitObject);
+  const git_commit* commit = (const git_commit*)gitObject;
 
   char commitHash[41];
   commitHash[40] = '\0';
@@ -623,7 +623,7 @@ void repository_commit(const std::vector<std::string>& arguments)
       commitHash;
   }
 
-  git_object_free(object);
+  git_object_free(gitObject);
 }
 
 void repository_tree(const std::vector<std::string>& arguments)
