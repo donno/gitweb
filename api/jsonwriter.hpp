@@ -103,9 +103,11 @@ public:
 
   JsonWriterObject& operator [](const char* key);
 
+  JsonWriterObject& operator =(bool value);
   JsonWriterObject& operator =(const std::string& value);
   JsonWriterObject& operator =(const char* value);
   JsonWriterObject& operator =(const unsigned int value);
+  JsonWriterObject& operator =(const unsigned long long value);
   JsonWriterObject& operator =(const std::int64_t value);
   JsonWriterObject& operator =(const JsonWriterArray& value);
 

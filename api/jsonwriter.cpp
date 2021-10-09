@@ -185,6 +185,21 @@ JsonWriterObject& JsonWriterObject::operator [](const char* key)
   return *this;
 }
 
+JsonWriterObject& JsonWriterObject::operator =(bool value)
+{
+  if (myState == WaitingForValue)
+  {
+      myOutput << ": " << (value ? "true" : "false");
+      myState = WaitingForAnotherKey;
+  }
+  else
+  {
+    // TODO: Propertly handle this case/error..
+  }
+
+  return *this;
+}
+
 JsonWriterObject& JsonWriterObject::operator =(const std::string& value)
 {
   return this->operator =(value.c_str());
@@ -207,6 +222,16 @@ JsonWriterObject& JsonWriterObject::operator =(const char* value)
 }
 
 JsonWriterObject& JsonWriterObject::operator =(const unsigned int value)
+{
+  if (myState == WaitingForValue)
+  {
+    *this << value;
+  }
+
+  return *this;
+}
+
+JsonWriterObject& JsonWriterObject::operator =(const unsigned long long value)
 {
   if (myState == WaitingForValue)
   {
