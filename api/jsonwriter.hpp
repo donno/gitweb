@@ -7,7 +7,7 @@
 // LICENSE      : The MIT License (see LICENSE.txt for details)
 // DESCRIPTION  :
 //
-// Provides an easy way for outputting JSON to a charachter stream
+// Provides an easy way for outputting JSON to a character stream
 // (std::ostream), without first storing all the data and then serialising it.
 //
 // Usage:

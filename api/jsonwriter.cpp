@@ -55,11 +55,11 @@ std::string JsonWriter::escape(const char* string)
 }
 
 
-JsonWriterObject::JsonWriterObject(std::ostream* output, std::string indenation)
+JsonWriterObject::JsonWriterObject(std::ostream* output, std::string indentation)
 : myOutput(*output),
   myState(WaitingForKey),
   isIndenting(true),
-  myIndentation(indenation)
+  myIndentation(indentation)
 {
   myOutput << "{";
   if (isIndenting) myOutput << '\n';
@@ -94,6 +94,8 @@ JsonWriterObject::~JsonWriterObject()
 
 JsonWriterObject& JsonWriterObject::operator <<(const char* value)
 {
+  if (value == nullptr) value = "";
+
   if (isIndenting)
   {
     if (myState == WaitingForAnotherKey)
@@ -132,7 +134,7 @@ template<typename T>
 JsonWriterObject& JsonWriterObject::operator <<(T value)
 {
   static_assert(std::is_integral<T>::value,
-                "This function is only intented to be used for integers.");
+                "This function is only intended to be used for integers.");
   // If value is a string it needs to be quoted and this function is not
   // suitable for that.
 
@@ -284,7 +286,14 @@ JsonWriterArray::~JsonWriterArray()
 
   if (isIndenting)
   {
-    myOutput << std::endl << myIndentation << ']';
+    if (hasAnElement)
+    {
+      myOutput << std::endl << myIndentation << ']';
+    }
+    else
+    {
+      myOutput << myIndentation << ']';
+    }
 
     // No indentation means it is the top level so it can decide where to
     // put the new line.
@@ -342,7 +351,7 @@ JsonWriterObject JsonWriterArray::object()
   {
     if (isIndenting)
     {
-      myOutput << ',' << std::endl << myIndentation << myIndentation;
+      myOutput << ',' << std::endl << myIndentation << "  ";
     }
     else
     {
@@ -351,7 +360,7 @@ JsonWriterObject JsonWriterArray::object()
   }
   else if (isIndenting)
   {
-    myOutput << myIndentation << myIndentation;
+    myOutput << myIndentation << "  ";
   }
 
   hasAnElement = true;
